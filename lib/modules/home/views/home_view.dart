@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../providers/auth_provider.dart';
-import '../auth/login_screen.dart';
-import '../leave/teacher_leave_screen.dart';
-import '../leave/principal_leave_screen.dart';
-import '../leave/notification_screen.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../auth/views/login_view.dart';
+import '../../leave_management/views/leave_history_view.dart';
+import '../../leave_management/views/admin_leave_approval_view.dart';
+import '../../leave_management/views/notification_view.dart';
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+class HomeView extends StatelessWidget {
+  const HomeView({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +49,7 @@ class HomeScreen extends StatelessWidget {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const NotificationScreen()),
+                        MaterialPageRoute(builder: (context) => const NotificationView()),
                       );
                     },
                   ),
@@ -88,7 +88,7 @@ class HomeScreen extends StatelessWidget {
               await authProvider.logout();
               if (context.mounted) {
                 Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  MaterialPageRoute(builder: (_) => const LoginView()),
                 );
               }
             },
@@ -163,12 +163,12 @@ class HomeScreen extends StatelessWidget {
                     if (user?.role.toLowerCase() == 'principal') {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const PrincipalLeaveScreen()),
+                        MaterialPageRoute(builder: (context) => const AdminLeaveApprovalView()),
                       );
                     } else {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const TeacherLeaveScreen()),
+                        MaterialPageRoute(builder: (context) => const LeaveHistoryView()),
                       );
                     }
                   },

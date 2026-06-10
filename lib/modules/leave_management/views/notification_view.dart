@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/leave_provider.dart';
-import '../../models/notification_model.dart';
-import '../../services/notification_service.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../models/notification_model.dart';
+import '../services/notification_service.dart';
 
-class NotificationScreen extends StatelessWidget {
-  const NotificationScreen({super.key});
+class NotificationView extends StatelessWidget {
+  const NotificationView({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -51,43 +50,43 @@ class NotificationScreen extends StatelessWidget {
           child: StreamBuilder<List<NotificationModel>>(
             stream: notificationService.getUserNotifications(user.id),
             builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error loading notifications', style: GoogleFonts.inter()));
-          }
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Center(child: Text('Error loading notifications', style: GoogleFonts.inter()));
+              }
 
-          final notifications = snapshot.data ?? [];
+              final notifications = snapshot.data ?? [];
 
-          if (notifications.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.notifications_off_outlined, size: 80, color: Colors.grey.shade400),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No notifications yet.',
-                    style: GoogleFonts.inter(color: Colors.grey.shade600, fontSize: 16),
+              if (notifications.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.notifications_off_outlined, size: 80, color: Colors.grey.shade400),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No notifications yet.',
+                        style: GoogleFonts.inter(color: Colors.grey.shade600, fontSize: 16),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            );
-          }
+                );
+              }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: notifications.length,
-            itemBuilder: (context, index) {
-              final notification = notifications[index];
-              return _buildNotificationCard(context, notification, notificationService, dateFormat);
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: notifications.length,
+                itemBuilder: (context, index) {
+                  final notification = notifications[index];
+                  return _buildNotificationCard(context, notification, notificationService, dateFormat);
+                },
+              );
             },
-          );
-        },
+          ),
+        ),
       ),
-    ),
-    ),
     );
   }
 

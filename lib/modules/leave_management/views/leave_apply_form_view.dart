@@ -5,17 +5,17 @@ import 'package:intl/intl.dart';
 import 'dart:html' as html;
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/leave_provider.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../providers/leave_provider.dart';
 
-class CreateLeaveScreen extends StatefulWidget {
-  const CreateLeaveScreen({super.key});
+class LeaveApplyFormView extends StatefulWidget {
+  const LeaveApplyFormView({super.key});
 
   @override
-  State<CreateLeaveScreen> createState() => _CreateLeaveScreenState();
+  State<LeaveApplyFormView> createState() => _LeaveApplyFormViewState();
 }
 
-class _CreateLeaveScreenState extends State<CreateLeaveScreen> {
+class _LeaveApplyFormViewState extends State<LeaveApplyFormView> {
   final _formKey = GlobalKey<FormState>();
   final _reasonController = TextEditingController();
   DateTimeRange? _selectedDateRange;

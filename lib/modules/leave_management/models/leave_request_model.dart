@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class LeaveModel {
+class LeaveRequestModel {
   final String id;
   final String userId;
   final String userName;
@@ -13,7 +13,7 @@ class LeaveModel {
   final DateTime createdAt;
   final String? medicalCert;
 
-  LeaveModel({
+  LeaveRequestModel({
     required this.id,
     required this.userId,
     required this.userName,
@@ -27,8 +27,8 @@ class LeaveModel {
     this.medicalCert,
   });
 
-  factory LeaveModel.fromMap(Map<String, dynamic> data, String documentId) {
-    return LeaveModel(
+  factory LeaveRequestModel.fromMap(Map<String, dynamic> data, String documentId) {
+    return LeaveRequestModel(
       id: documentId,
       userId: data['userId'] ?? '',
       userName: data['userName'] ?? '',

@@ -4,12 +4,12 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'dart:html' as html;
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../providers/leave_provider.dart';
-import '../../models/leave_model.dart';
-import '../../models/user_model.dart';
+import '../providers/leave_provider.dart';
+import '../models/leave_request_model.dart';
+import '../../auth/models/user_model.dart';
 
-class PrincipalLeaveScreen extends StatelessWidget {
-  const PrincipalLeaveScreen({super.key});
+class AdminLeaveApprovalView extends StatelessWidget {
+  const AdminLeaveApprovalView({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -25,49 +25,49 @@ class PrincipalLeaveScreen extends StatelessWidget {
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 800),
-          child: StreamBuilder<List<LeaveModel>>(
+          child: StreamBuilder<List<LeaveRequestModel>>(
             stream: leaveProvider.getPendingLeaves(),
             builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error loading requests', style: GoogleFonts.inter()));
-          }
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Center(child: Text('Error loading requests', style: GoogleFonts.inter()));
+              }
 
-          final leaves = snapshot.data ?? [];
+              final leaves = snapshot.data ?? [];
 
-          if (leaves.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.check_circle_outline, size: 80, color: Colors.green.withOpacity(0.5)),
-                  const SizedBox(height: 16),
-                  Text('All caught up!', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Text('No pending leave requests.', style: GoogleFonts.inter(color: Colors.grey.shade600, fontSize: 16)),
-                ],
-              ),
-            );
-          }
+              if (leaves.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.check_circle_outline, size: 80, color: Colors.green.withOpacity(0.5)),
+                      const SizedBox(height: 16),
+                      Text('All caught up!', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      Text('No pending leave requests.', style: GoogleFonts.inter(color: Colors.grey.shade600, fontSize: 16)),
+                    ],
+                  ),
+                );
+              }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: leaves.length,
-            itemBuilder: (context, index) {
-              final leave = leaves[index];
-              return _buildLeaveCard(context, leave, leaveProvider);
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: leaves.length,
+                itemBuilder: (context, index) {
+                  final leave = leaves[index];
+                  return _buildLeaveCard(context, leave, leaveProvider);
+                },
+              );
             },
-          );
-        },
+          ),
+        ),
       ),
-    ),
-    ),
     );
   }
 
-  void _showMedicalCertDialog(BuildContext context, LeaveModel leave) {
+  void _showMedicalCertDialog(BuildContext context, LeaveRequestModel leave) {
     if (leave.medicalCert == null) return;
     
     showDialog(
@@ -177,7 +177,7 @@ class PrincipalLeaveScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLeaveCard(BuildContext context, LeaveModel leave, LeaveProvider provider) {
+  Widget _buildLeaveCard(BuildContext context, LeaveRequestModel leave, LeaveProvider provider) {
     final dateFormat = DateFormat('MMM d, yyyy');
 
     const Map<String, double> defaultLeaveLimits = {
