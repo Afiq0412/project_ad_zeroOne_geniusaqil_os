@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
-import '../../home/views/home_view.dart';
+import '../../providers/auth_provider.dart';
+import '../home/home_screen.dart';
 
-class RegistrationView extends StatefulWidget {
-  const RegistrationView({super.key});
+class RegistrationScreen extends StatefulWidget {
+  const RegistrationScreen({super.key});
 
   @override
-  State<RegistrationView> createState() => _RegistrationViewState();
+  State<RegistrationScreen> createState() => _RegistrationScreenState();
 }
 
-class _RegistrationViewState extends State<RegistrationView> {
+class _RegistrationScreenState extends State<RegistrationScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -38,7 +38,7 @@ class _RegistrationViewState extends State<RegistrationView> {
 
       if (success && mounted) {
         Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const HomeView()),
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
           (Route<dynamic> route) => false,
         );
       }

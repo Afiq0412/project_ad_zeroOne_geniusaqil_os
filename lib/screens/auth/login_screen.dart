@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
-import 'registration_view.dart';
-import '../../home/views/home_view.dart';
+import '../../providers/auth_provider.dart';
+import 'registration_screen.dart';
+import '../home/home_screen.dart';
 
-class LoginView extends StatefulWidget {
-  const LoginView({super.key});
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
 
   @override
-  State<LoginView> createState() => _LoginViewState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginViewState extends State<LoginView> {
+class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -34,7 +34,7 @@ class _LoginViewState extends State<LoginView> {
 
       if (success && mounted) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const HomeView()),
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
         );
       }
     }
@@ -117,28 +117,28 @@ class _LoginViewState extends State<LoginView> {
                   onPressed: authProvider.isLoading
                       ? null
                       : () async {
-                           if (formKey.currentState!.validate()) {
-                             final success = await authProvider.sendPasswordReset(
-                               emailController.text.trim(),
-                             );
-                             if (success && dialogContext.mounted) {
-                               authProvider.clearError();
-                               Navigator.of(dialogContext).pop();
-                               ScaffoldMessenger.of(context).showSnackBar(
-                                 SnackBar(
-                                   content: Text(
-                                     'Password reset email sent successfully!',
-                                     style: GoogleFonts.inter(),
-                                   ),
-                                   backgroundColor: Colors.green,
-                                 ),
-                               );
-                             } else {
-                               // Force update dialog state to show error
-                               setState(() {});
-                             }
-                           }
-                         },
+                          if (formKey.currentState!.validate()) {
+                            final success = await authProvider.sendPasswordReset(
+                              emailController.text.trim(),
+                            );
+                            if (success && dialogContext.mounted) {
+                              authProvider.clearError();
+                              Navigator.of(dialogContext).pop();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Password reset email sent successfully!',
+                                    style: GoogleFonts.inter(),
+                                  ),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            } else {
+                              // Force update dialog state to show error
+                              setState(() {});
+                            }
+                          }
+                        },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.primary,
                     shape: RoundedRectangleBorder(
@@ -354,7 +354,7 @@ class _LoginViewState extends State<LoginView> {
                 onPressed: () {
                   authProvider.clearError();
                   Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const RegistrationView()),
+                    MaterialPageRoute(builder: (_) => const RegistrationScreen()),
                   );
                 },
                 child: RichText(
@@ -378,6 +378,6 @@ class _LoginViewState extends State<LoginView> {
         ),
       ),
     ),
-  );
-}
+    );
+  }
 }

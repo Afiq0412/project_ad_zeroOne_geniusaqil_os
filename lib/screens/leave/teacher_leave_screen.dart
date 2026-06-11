@@ -3,14 +3,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../auth/providers/auth_provider.dart';
-import '../providers/leave_provider.dart';
-import '../models/leave_request_model.dart';
-import '../../auth/models/user_model.dart';
-import 'leave_apply_form_view.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/leave_provider.dart';
+import '../../models/leave_model.dart';
+import '../../models/user_model.dart';
+import 'create_leave_screen.dart';
 
-class LeaveHistoryView extends StatelessWidget {
-  const LeaveHistoryView({super.key});
+class TeacherLeaveScreen extends StatelessWidget {
+  const TeacherLeaveScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -155,7 +155,7 @@ class LeaveHistoryView extends StatelessWidget {
           const Divider(height: 1),
           // Leave Requests List
           Expanded(
-            child: StreamBuilder<List<LeaveRequestModel>>(
+            child: StreamBuilder<List<LeaveModel>>(
               stream: leaveProvider.getUserLeaves(user.id),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -199,7 +199,7 @@ class LeaveHistoryView extends StatelessWidget {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const LeaveApplyFormView()),
+            MaterialPageRoute(builder: (context) => const CreateLeaveScreen()),
           );
         },
         backgroundColor: Theme.of(context).colorScheme.primary,
@@ -209,7 +209,7 @@ class LeaveHistoryView extends StatelessWidget {
     );
   }
 
-  Widget _buildLeaveCard(BuildContext context, LeaveRequestModel leave, LeaveProvider leaveProvider, UserModel user) {
+  Widget _buildLeaveCard(BuildContext context, LeaveModel leave, LeaveProvider leaveProvider, UserModel user) {
     Color statusColor;
     switch (leave.status) {
       case 'Approved':

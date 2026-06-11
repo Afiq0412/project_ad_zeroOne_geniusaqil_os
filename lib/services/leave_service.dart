@@ -1,12 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/leave_request_model.dart';
+import '../models/leave_model.dart';
 
 class LeaveService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final String collection = 'leave_requests';
 
   // Submit a new leave request
-  Future<void> submitLeaveRequest(LeaveRequestModel leave) async {
+  Future<void> submitLeaveRequest(LeaveModel leave) async {
     try {
       await _firestore.collection(collection).doc(leave.id).set(leave.toMap());
     } catch (e) {
@@ -15,26 +15,26 @@ class LeaveService {
   }
 
   // Stream of leave requests for a specific user (for Teachers)
-  Stream<List<LeaveRequestModel>> getUserLeaveRequests(String userId) {
+  Stream<List<LeaveModel>> getUserLeaveRequests(String userId) {
     return _firestore
         .collection(collection)
         .where('userId', isEqualTo: userId)
         .snapshots()
         .map((snapshot) {
-      final list = snapshot.docs.map((doc) => LeaveRequestModel.fromMap(doc.data(), doc.id)).toList();
+      final list = snapshot.docs.map((doc) => LeaveModel.fromMap(doc.data(), doc.id)).toList();
       list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return list;
     });
   }
 
   // Stream of pending leave requests (for Principals)
-  Stream<List<LeaveRequestModel>> getPendingLeaveRequests() {
+  Stream<List<LeaveModel>> getPendingLeaveRequests() {
     return _firestore
         .collection(collection)
         .where('status', isEqualTo: 'Pending')
         .snapshots()
         .map((snapshot) {
-      final list = snapshot.docs.map((doc) => LeaveRequestModel.fromMap(doc.data(), doc.id)).toList();
+      final list = snapshot.docs.map((doc) => LeaveModel.fromMap(doc.data(), doc.id)).toList();
       list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return list;
     });

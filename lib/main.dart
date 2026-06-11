@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'firebase_options.dart';
-import 'core/theme/app_theme.dart';
-import 'modules/auth/providers/auth_provider.dart';
-import 'modules/leave_management/providers/leave_provider.dart';
-import 'modules/auth/views/login_view.dart';
-import 'modules/home/views/home_view.dart';
+import 'providers/auth_provider.dart';
+import 'providers/leave_provider.dart';
+import 'screens/auth/login_screen.dart';
+import 'screens/home/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,7 +39,17 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'GENIUSAQILOS',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1E5480),
+          primary: const Color(0xFF1E5480),
+          secondary: const Color(0xFFED7E24),
+        ),
+        useMaterial3: true,
+        textTheme: GoogleFonts.interTextTheme(
+          Theme.of(context).textTheme,
+        ),
+      ),
       home: Consumer<AuthProvider>(
         builder: (context, authProvider, _) {
           if (authProvider.isLoading) {
@@ -51,9 +61,9 @@ class MyApp extends StatelessWidget {
           }
 
           if (authProvider.isAuthenticated) {
-            return const HomeView();
+            return const HomeScreen();
           } else {
-            return const LoginView();
+            return const LoginScreen();
           }
         },
       ),

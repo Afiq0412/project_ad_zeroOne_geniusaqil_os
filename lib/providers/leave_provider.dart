@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/leave_request_model.dart';
-import '../../auth/models/user_model.dart';
+import '../models/leave_model.dart';
+import '../models/user_model.dart';
 import '../services/leave_service.dart';
 import '../services/notification_service.dart';
 
@@ -29,7 +29,7 @@ class LeaveProvider extends ChangeNotifier {
     _setLoading(true);
     try {
       final String id = DateTime.now().millisecondsSinceEpoch.toString();
-      final newLeave = LeaveRequestModel(
+      final newLeave = LeaveModel(
         id: id,
         userId: userId,
         userName: userName,
@@ -122,11 +122,11 @@ class LeaveProvider extends ChangeNotifier {
   }
 
   // Streams
-  Stream<List<LeaveRequestModel>> getUserLeaves(String userId) {
+  Stream<List<LeaveModel>> getUserLeaves(String userId) {
     return _leaveService.getUserLeaveRequests(userId);
   }
 
-  Stream<List<LeaveRequestModel>> getPendingLeaves() {
+  Stream<List<LeaveModel>> getPendingLeaves() {
     return _leaveService.getPendingLeaveRequests();
   }
 
