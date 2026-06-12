@@ -7,6 +7,8 @@ import '../../auth/views/login_view.dart';
 import '../../leave_management/views/leave_history_view.dart';
 import '../../leave_management/views/admin_leave_approval_view.dart';
 import '../../leave_management/views/notification_view.dart';
+import '../../manage_teachers/views/manage_teachers_view.dart';
+import '../../task_duty_manager/views/duty_home_view.dart';
 
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
@@ -174,6 +176,83 @@ class HomeView extends StatelessWidget {
                   },
                 ),
               ),
+              // Task & Duty Manager card — visible to ALL roles
+              const SizedBox(height: 12),
+              Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.all(16),
+                  leading: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.teal.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.assignment_turned_in_outlined,
+                        color: Colors.teal),
+                  ),
+                  title: Text(
+                    'Task & Duty Manager',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(
+                    user?.role.toLowerCase() == 'principal'
+                        ? 'Manage duty rosters and track completion'
+                        : 'View your assigned duties and checklists',
+                    style: GoogleFonts.inter(color: Colors.grey.shade600),
+                  ),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const DutyHomeView(),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              // Manage Teachers card — visible to Principal only
+              if (user?.role.toLowerCase() == 'principal') ...[
+                const SizedBox(height: 12),
+                Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(16),
+                    leading: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.indigo.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.manage_accounts, color: Colors.indigo),
+                    ),
+                    title: Text(
+                      'Manage Teachers',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      'View and manage all registered teachers',
+                      style: GoogleFonts.inter(color: Colors.grey.shade600),
+                    ),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ManageTeachersView(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ],
           ),
         ),

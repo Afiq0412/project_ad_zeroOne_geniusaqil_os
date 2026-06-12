@@ -6,6 +6,8 @@ import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'modules/auth/providers/auth_provider.dart';
 import 'modules/leave_management/providers/leave_provider.dart';
+import 'modules/manage_teachers/providers/manage_teachers_provider.dart';
+import 'modules/task_duty_manager/providers/duty_provider.dart';
 import 'modules/auth/views/login_view.dart';
 import 'modules/home/views/home_view.dart';
 
@@ -25,6 +27,8 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => LeaveProvider()),
+        ChangeNotifierProvider(create: (_) => ManageTeachersProvider()),
+        ChangeNotifierProvider(create: (_) => DutyProvider()),
       ],
       child: const MyApp(),
     ),
