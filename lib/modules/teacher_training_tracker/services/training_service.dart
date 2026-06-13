@@ -10,7 +10,9 @@ class TrainingService {
   // Upload document or photo asset to Firebase Storage
   Future<String?> uploadFile(File file, String folder, String filename) async {
     try {
-      Reference ref = _storage.ref().child('teacher_trainings/$folder/$filename');
+      Reference ref = _storage.ref().child(
+        'teacher_trainings/$folder/$filename',
+      );
       UploadTask uploadTask = ref.putFile(file);
       TaskSnapshot snapshot = await uploadTask;
       return await snapshot.ref.getDownloadURL();
@@ -21,9 +23,9 @@ class TrainingService {
   }
 
   // Submit new training record log entry
-  Future<bool> submitTrainingLog(TrainingModel training) async {
+  Future<bool> addTraining(TrainingModel training) async {
     try {
-      await _db.collection('trainings').add(training.toMap());
+      await _db.collection('trainings').add(training.toJson());
       return true;
     } catch (e) {
       print("Error saving log: $e");
@@ -38,9 +40,11 @@ class TrainingService {
         .where('teacherId', isEqualTo: teacherId)
         .orderBy('date', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => TrainingModel.fromMap(doc.data(), doc.id))
-            .toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => TrainingModel.fromJson(doc.data(), doc.id))
+              .toList(),
+        );
   }
 
   // Stream all global training logs for Principal dashboard reviews
@@ -49,8 +53,33 @@ class TrainingService {
         .collection('trainings')
         .orderBy('date', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => TrainingModel.fromMap(doc.data(), doc.id))
-            .toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => TrainingModel.fromJson(doc.data(), doc.id))
+              .toList(),
+        );
+  }
+
+  // Update existing training record log entry
+  Future<bool> updateTraining(TrainingModel training) async {
+    if (training.id == null) return false;
+    try {
+      await _db.collection('trainings').doc(training.id).update(training.toJson());
+      return true;
+    } catch (e) {
+      print("Error updating log: $e");
+      return false;
+    }
+  }
+
+  // Delete a training record log entry
+  Future<bool> deleteTraining(String id) async {
+    try {
+      await _db.collection('trainings').doc(id).delete();
+      return true;
+    } catch (e) {
+      print("Error deleting log: $e");
+      return false;
+    }
   }
 }
