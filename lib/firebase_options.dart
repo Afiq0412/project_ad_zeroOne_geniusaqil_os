@@ -40,48 +40,49 @@ class DefaultFirebaseOptions {
     }
   }
 
-  static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBowQZnTwTGsVzomOkKrUTtUsB6oinaR5Y',
-    appId: '1:580329183256:ios:a6f81e2452903ad1fb0b6d',
-    messagingSenderId: '580329183256',
-    projectId: 'project-ad-2026-4b28d',
-    storageBucket: 'project-ad-2026-4b28d.firebasestorage.app',
-    iosBundleId: 'com.example.basicFlutterApp',
-  );
-  static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyBowQZnTwTGsVzomOkKrUTtUsB6oinaR5Y',
-    appId: '1:580329183256:ios:a6f81e2452903ad1fb0b6d',
-    messagingSenderId: '580329183256',
-    projectId: 'project-ad-2026-4b28d',
-    storageBucket: 'project-ad-2026-4b28d.firebasestorage.app',
-    iosBundleId: 'com.example.basicFlutterApp',
-  );
-
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyBYY1ChOJ6gdUqlBB45Aeu1e4Xhw8VicFY',
-    appId: '1:580329183256:web:ac42ba635cf4bf09fb0b6d',
-    messagingSenderId: '580329183256',
-    projectId: 'project-ad-2026-4b28d',
-    authDomain: 'project-ad-2026-4b28d.firebaseapp.com',
-    storageBucket: 'project-ad-2026-4b28d.firebasestorage.app',
-    measurementId: 'G-4CFD4Z9W6J',
+    apiKey: 'AIzaSyC8hRDwmTUFxl_zPoPbm2xflSoclWSxH80',
+    appId: '1:677742863763:web:f2cb02a24ab1cbc509f466',
+    messagingSenderId: '677742863763',
+    projectId: 'tadika-62f76',
+    authDomain: 'tadika-62f76.firebaseapp.com',
+    storageBucket: 'tadika-62f76.firebasestorage.app',
+    measurementId: 'G-RH66823P64',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBsvACk_6F3_dQtTQdUS7rmXVBXklrW048',
-    appId: '1:580329183256:android:0fb210dd7b78e1d0fb0b6d',
-    messagingSenderId: '580329183256',
-    projectId: 'project-ad-2026-4b28d',
-    storageBucket: 'project-ad-2026-4b28d.firebasestorage.app',
+    apiKey: 'AIzaSyCu1_5ZaL2Ab5zkFc7gBtxekA_FwQhm5Lc',
+    appId: '1:677742863763:android:d99b4fa6da99693209f466',
+    messagingSenderId: '677742863763',
+    projectId: 'tadika-62f76',
+    storageBucket: 'tadika-62f76.firebasestorage.app',
+  );
+
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyBHeMRSrI4tKHYwSQP4AXRucFzw9SHjSMQ',
+    appId: '1:677742863763:ios:e04424dcb78f5c9009f466',
+    messagingSenderId: '677742863763',
+    projectId: 'tadika-62f76',
+    storageBucket: 'tadika-62f76.firebasestorage.app',
+    iosBundleId: 'com.example.myFlutterApp',
+  );
+
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyBHeMRSrI4tKHYwSQP4AXRucFzw9SHjSMQ',
+    appId: '1:677742863763:ios:e04424dcb78f5c9009f466',
+    messagingSenderId: '677742863763',
+    projectId: 'tadika-62f76',
+    storageBucket: 'tadika-62f76.firebasestorage.app',
+    iosBundleId: 'com.example.myFlutterApp',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyBYY1ChOJ6gdUqlBB45Aeu1e4Xhw8VicFY',
-    appId: '1:580329183256:web:be44be44bb43befcfb0b6d',
-    messagingSenderId: '580329183256',
-    projectId: 'project-ad-2026-4b28d',
-    authDomain: 'project-ad-2026-4b28d.firebaseapp.com',
-    storageBucket: 'project-ad-2026-4b28d.firebasestorage.app',
-    measurementId: 'G-J55RZTWWDJ',
+    apiKey: 'AIzaSyC8hRDwmTUFxl_zPoPbm2xflSoclWSxH80',
+    appId: '1:677742863763:web:d94d8ef7b172ffc309f466',
+    messagingSenderId: '677742863763',
+    projectId: 'tadika-62f76',
+    authDomain: 'tadika-62f76.firebaseapp.com',
+    storageBucket: 'tadika-62f76.firebasestorage.app',
+    measurementId: 'G-LHY99D0ZVC',
   );
 }

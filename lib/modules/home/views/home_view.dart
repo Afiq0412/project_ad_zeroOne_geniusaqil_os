@@ -7,12 +7,9 @@ import '../../auth/views/login_view.dart';
 import '../../leave_management/views/leave_history_view.dart';
 import '../../leave_management/views/admin_leave_approval_view.dart';
 import '../../leave_management/views/notification_view.dart';
-<<<<<<< Updated upstream
-=======
 import '../../manage_teachers/views/manage_teachers_view.dart';
 import '../../task_duty_manager/views/duty_home_view.dart';
 import '../../teacher_training_tracker/views/training_dashboard_view.dart';
->>>>>>> Stashed changes
 
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
@@ -138,33 +135,6 @@ class HomeView extends StatelessWidget {
                     horizontal: 16,
                     vertical: 8,
                   ),
-<<<<<<< Updated upstream
-                  title: Text(
-                    'Leave Management',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text(
-                    'Apply for leave and track your balance',
-                    style: GoogleFonts.inter(color: Colors.grey.shade600),
-                  ),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {
-                    if (user?.role.toLowerCase() == 'principal') {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const AdminLeaveApprovalView()),
-                      );
-                    } else {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const LeaveHistoryView()),
-                      );
-                    }
-                  },
-                ),
-              ),
-            ],
-=======
                   decoration: BoxDecoration(
                     color: Theme.of(
                       context,
@@ -348,7 +318,6 @@ class HomeView extends StatelessWidget {
                 ),
               ],
             ),
->>>>>>> Stashed changes
           ),
         ),
       ),
