@@ -10,6 +10,7 @@ import 'modules/manage_teachers/providers/manage_teachers_provider.dart';
 import 'modules/task_duty_manager/providers/duty_provider.dart';
 import 'modules/auth/views/login_view.dart';
 import 'modules/home/views/home_view.dart';
+import 'modules/teacher_training_tracker/providers/training_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +30,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => LeaveProvider()),
         ChangeNotifierProvider(create: (_) => ManageTeachersProvider()),
         ChangeNotifierProvider(create: (_) => DutyProvider()),
+        ChangeNotifierProvider(create: (_) => TrainingProvider()),
       ],
       child: const MyApp(),
     ),

@@ -3,16 +3,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class TrainingModel {
   final String? id;
   final String teacherId;
-  final String title;               // [cite: 313]
-  final String category;            // [cite: 313]
-  final String organizer;           // [cite: 313]
-  final DateTime date;              // [cite: 313]
-  final double duration;            // [cite: 313]
-  final String mode;                // [cite: 313]
-  final String venue;               // [cite: 313]
-  final String reflection;          // [cite: 313]
-  final String? certificateUrl;     // [cite: 314]
-  final String? photoUrl;           // [cite: 314]
+  final String title;
+  final String category;
+  final String organizer;
+  final DateTime date;
+  final double duration;
+  final String mode;
+  final String venue;
+  final String reflection;
+  final String? certificateUrl;
+  final String? photoUrl;
   final DateTime createdAt;
 
   TrainingModel({
@@ -31,8 +31,27 @@ class TrainingModel {
     required this.createdAt,
   });
 
-  // Convert to Map for Firestore
-  Map<String, dynamic> toMap() {
+  // Converts the data from Firestore into our Flutter Model
+  factory TrainingModel.fromJson(Map<String, dynamic> json, String documentId) {
+    return TrainingModel(
+      id: documentId,
+      teacherId: json['teacherId'] ?? '',
+      title: json['title'] ?? '',
+      category: json['category'] ?? '',
+      organizer: json['organizer'] ?? '',
+      date: (json['date'] as Timestamp).toDate(),
+      duration: (json['duration'] ?? 0).toDouble(),
+      mode: json['mode'] ?? 'Physical',
+      venue: json['venue'] ?? '',
+      reflection: json['reflection'] ?? '',
+      certificateUrl: json['certificateUrl'],
+      photoUrl: json['photoUrl'],
+      createdAt: (json['createdAt'] as Timestamp).toDate(),
+    );
+  }
+
+  // Converts our Flutter Model into data Firestore can save
+  Map<String, dynamic> toJson() {
     return {
       'teacherId': teacherId,
       'title': title,
@@ -47,24 +66,5 @@ class TrainingModel {
       'photoUrl': photoUrl,
       'createdAt': Timestamp.fromDate(createdAt),
     };
-  }
-
-  // Create Model object from Firestore Document
-  factory TrainingModel.fromMap(Map<String, dynamic> map, String documentId) {
-    return TrainingModel(
-      id: documentId,
-      teacherId: map['teacherId'] ?? '',
-      title: map['title'] ?? '',
-      category: map['category'] ?? '',
-      organizer: map['organizer'] ?? '',
-      date: (map['date'] as Timestamp).toDate(),
-      duration: (map['duration'] as num).toDouble(),
-      mode: map['mode'] ?? 'Physical',
-      venue: map['venue'] ?? '',
-      reflection: map['reflection'] ?? '',
-      certificateUrl: map['certificateUrl'],
-      photoUrl: map['photoUrl'],
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
-    );
   }
 }
