@@ -179,6 +179,7 @@ class AdminLeaveApprovalView extends StatelessWidget {
 
   Widget _buildLeaveCard(BuildContext context, LeaveRequestModel leave, LeaveProvider provider) {
     final dateFormat = DateFormat('MMM d, yyyy');
+    final isNarrow = MediaQuery.of(context).size.width < 450;
 
     const Map<String, double> defaultLeaveLimits = {
       'Annual leave': 8.0,
@@ -205,19 +206,25 @@ class AdminLeaveApprovalView extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                      child: Icon(Icons.person, color: Theme.of(context).colorScheme.primary),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      leave.userName,
-                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
-                    ),
-                  ],
+                Expanded(
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                        child: Icon(Icons.person, color: Theme.of(context).colorScheme.primary),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          leave.userName,
+                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 12),
                 Text(
                   dateFormat.format(leave.createdAt),
                   style: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 12),
@@ -234,9 +241,11 @@ class AdminLeaveApprovalView extends StatelessWidget {
               children: [
                 Icon(Icons.date_range, color: Theme.of(context).colorScheme.primary, size: 20),
                 const SizedBox(width: 8),
-                Text(
-                  '${dateFormat.format(leave.startDate)} - ${dateFormat.format(leave.endDate)} (${leave.daysCount} day(s))',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14),
+                Expanded(
+                  child: Text(
+                    '${dateFormat.format(leave.startDate)} - ${dateFormat.format(leave.endDate)} (${leave.daysCount} day(s))',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
                 ),
               ],
             ),
@@ -341,32 +350,56 @@ class AdminLeaveApprovalView extends StatelessWidget {
                       }),
                     ],
                     const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => _updateStatus(context, provider, leave.id, 'Rejected'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.red,
-                              side: const BorderSide(color: Colors.red),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                            child: const Text('Reject'),
+                    isNarrow
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              OutlinedButton(
+                                onPressed: () => _updateStatus(context, provider, leave.id, 'Rejected'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.red,
+                                  side: const BorderSide(color: Colors.red),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                                child: const Text('Reject'),
+                              ),
+                              const SizedBox(height: 8),
+                              ElevatedButton(
+                                onPressed: () => _updateStatus(context, provider, leave.id, 'Approved'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                                child: const Text('Approve', style: TextStyle(color: Colors.white)),
+                              ),
+                            ],
+                          )
+                        : Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () => _updateStatus(context, provider, leave.id, 'Rejected'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.red,
+                                    side: const BorderSide(color: Colors.red),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                  child: const Text('Reject'),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () => _updateStatus(context, provider, leave.id, 'Approved'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                  child: const Text('Approve', style: TextStyle(color: Colors.white)),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () => _updateStatus(context, provider, leave.id, 'Approved'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                            child: const Text('Approve', style: TextStyle(color: Colors.white)),
-                          ),
-                        ),
-                      ],
-                    ),
                     const SizedBox(height: 8),
                     SizedBox(
                       width: double.infinity,

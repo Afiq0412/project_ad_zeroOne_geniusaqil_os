@@ -85,69 +85,110 @@ class LeaveHistoryView extends StatelessWidget {
 
                   final double remainingHalfDays = (2 - currentMonthHalfDayCount).toDouble();
 
-                  return Container(
-                    height: 110,
-                    color: Colors.white,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      children: balances.entries.map((entry) {
-                        final String categoryName = entry.key;
-                        double remainingDays = entry.value;
-                        double totalDays = defaultLeaveLimits[categoryName] ?? 8.0;
+                  final isDesktop = MediaQuery.of(context).size.width >= 600;
 
-                        if (categoryName == 'Half day leave') {
-                          remainingDays = remainingHalfDays;
-                          totalDays = 2.0;
-                        }
-
-                        final double fraction = totalDays > 0 ? (remainingDays / totalDays) : 0.0;
-
-                        return Card(
-                          margin: const EdgeInsets.only(right: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          elevation: 1,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            child: Row(
-                              children: [
-                                SizedBox(
-                                  width: 36,
-                                  height: 36,
-                                  child: CircularProgressIndicator(
-                                    value: fraction.clamp(0.0, 1.0),
-                                    backgroundColor: Colors.grey.shade200,
-                                    color: fraction > 0.5
-                                        ? Colors.green
-                                        : (fraction > 0.2 ? Colors.orange : Colors.red),
-                                    strokeWidth: 4,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      categoryName,
-                                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      categoryName == 'Half day leave'
-                                          ? '${remainingDays.toStringAsFixed(0)} / ${totalDays.toStringAsFixed(0)} times left'
-                                          : '${remainingDays.toStringAsFixed(1)} / ${totalDays.toStringAsFixed(1)} left',
-                                      style: GoogleFonts.inter(fontSize: 11, color: Colors.grey.shade600),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                  Widget buildCard(String categoryName, double remainingDays, double totalDays) {
+                    final double fraction = totalDays > 0 ? (remainingDays / totalDays) : 0.0;
+                    return Card(
+                      margin: isDesktop ? EdgeInsets.zero : const EdgeInsets.only(right: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 1,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 36,
+                              height: 36,
+                              child: CircularProgressIndicator(
+                                value: fraction.clamp(0.0, 1.0),
+                                backgroundColor: Colors.grey.shade200,
+                                color: fraction > 0.5
+                                    ? Colors.green
+                                    : (fraction > 0.2 ? Colors.orange : Colors.red),
+                                strokeWidth: 4,
+                              ),
                             ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  );
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    categoryName,
+                                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    categoryName == 'Half day leave'
+                                        ? '${remainingDays.toStringAsFixed(0)} / ${totalDays.toStringAsFixed(0)} times left'
+                                        : '${remainingDays.toStringAsFixed(1)} / ${totalDays.toStringAsFixed(1)} left',
+                                    style: GoogleFonts.inter(fontSize: 11, color: Colors.grey.shade600),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  if (isDesktop) {
+                    return Container(
+                      color: Colors.white,
+                      padding: const EdgeInsets.all(16),
+                      width: double.infinity,
+                      child: Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        alignment: WrapAlignment.center,
+                        children: balances.entries.map((entry) {
+                          final String categoryName = entry.key;
+                          double remainingDays = entry.value;
+                          double totalDays = defaultLeaveLimits[categoryName] ?? 8.0;
+
+                          if (categoryName == 'Half day leave') {
+                            remainingDays = remainingHalfDays;
+                            totalDays = 2.0;
+                          }
+
+                          return SizedBox(
+                            width: 180,
+                            height: 60,
+                            child: buildCard(categoryName, remainingDays, totalDays),
+                          );
+                        }).toList(),
+                      ),
+                    );
+                  } else {
+                    return Container(
+                      height: 110,
+                      color: Colors.white,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        children: balances.entries.map((entry) {
+                          final String categoryName = entry.key;
+                          double remainingDays = entry.value;
+                          double totalDays = defaultLeaveLimits[categoryName] ?? 8.0;
+
+                          if (categoryName == 'Half day leave') {
+                            remainingDays = remainingHalfDays;
+                            totalDays = 2.0;
+                          }
+
+                          return SizedBox(
+                            width: 180,
+                            child: buildCard(categoryName, remainingDays, totalDays),
+                          );
+                        }).toList(),
+                      ),
+                    );
+                  }
                 },
               );
             },
@@ -263,9 +304,11 @@ class LeaveHistoryView extends StatelessWidget {
               children: [
                 Icon(Icons.date_range, color: Theme.of(context).colorScheme.primary, size: 20),
                 const SizedBox(width: 8),
-                Text(
-                  '${dateFormat.format(leave.startDate)} - ${dateFormat.format(leave.endDate)} (${leave.daysCount} day(s))',
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15),
+                Expanded(
+                  child: Text(
+                    '${dateFormat.format(leave.startDate)} - ${dateFormat.format(leave.endDate)} (${leave.daysCount} day(s))',
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15),
+                  ),
                 ),
               ],
             ),

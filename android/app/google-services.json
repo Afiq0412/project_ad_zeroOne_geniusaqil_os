@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "580329183256",
-    "project_id": "project-ad-2026-4b28d",
-    "storage_bucket": "project-ad-2026-4b28d.firebasestorage.app"
+    "project_number": "677742863763",
+    "project_id": "tadika-62f76",
+    "storage_bucket": "tadika-62f76.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:580329183256:android:0fb210dd7b78e1d0fb0b6d",
+        "mobilesdk_app_id": "1:677742863763:android:d99b4fa6da99693209f466",
         "android_client_info": {
           "package_name": "com.example.basic_flutter_app"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBsvACk_6F3_dQtTQdUS7rmXVBXklrW048"
+          "current_key": "AIzaSyCu1_5ZaL2Ab5zkFc7gBtxekA_FwQhm5Lc"
         }
       ],
       "services": {

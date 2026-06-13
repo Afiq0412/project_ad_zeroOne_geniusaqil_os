@@ -96,89 +96,135 @@ class HomeView extends StatelessWidget {
         ],
       ),
       body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircleAvatar(
-                radius: 50,
-                backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                child: Icon(Icons.person, size: 50, color: Theme.of(context).colorScheme.primary),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Welcome, ${user?.name ?? "User"}!',
-                style: GoogleFonts.outfit(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF1F2937),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isDesktop = constraints.maxWidth >= 600;
+
+            final profileSection = Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircleAvatar(
+                  radius: 50,
+                  backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  child: Icon(Icons.person, size: 50, color: Theme.of(context).colorScheme.primary),
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  user?.role.toUpperCase() ?? "ROLE",
-                  style: GoogleFonts.inter(
+                const SizedBox(height: 24),
+                Text(
+                  'Welcome, ${user?.name ?? "User"}!',
+                  style: GoogleFonts.outfit(
+                    fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.primary,
+                    color: const Color(0xFF1F2937),
                   ),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-              const SizedBox(height: 40),
-              // Placeholder for the Leave Management module
-              Card(
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(16),
-                  leading: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.1),
-                      shape: BoxShape.circle,
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    user?.role.toUpperCase() ?? "ROLE",
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
-                    child: const Icon(Icons.event_available, color: Colors.green),
                   ),
-                  title: Text(
-                    'Leave Management',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text(
-                    'Apply for leave and track your balance',
-                    style: GoogleFonts.inter(color: Colors.grey.shade600),
-                  ),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {
-                    if (user?.role.toLowerCase() == 'principal') {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const AdminLeaveApprovalView()),
-                      );
-                    } else {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const LeaveHistoryView()),
-                      );
-                    }
-                  },
                 ),
+              ],
+            );
+
+            final actionSection = Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
-            ],
-          ),
+              child: ListTile(
+                contentPadding: const EdgeInsets.all(16),
+                leading: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.event_available, color: Colors.green),
+                ),
+                title: Text(
+                  'Leave Management',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text(
+                  'Apply for leave and track your balance',
+                  style: GoogleFonts.inter(color: Colors.grey.shade600),
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () {
+                  if (user?.role.toLowerCase() == 'principal') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AdminLeaveApprovalView()),
+                    );
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const LeaveHistoryView()),
+                    );
+                  }
+                },
+              ),
+            );
+
+            if (isDesktop) {
+              return ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 800),
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        flex: 1,
+                        child: Card(
+                          elevation: 1,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(24.0),
+                            child: profileSection,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 24),
+                      Expanded(
+                        flex: 1,
+                        child: actionSection,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            } else {
+              return ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 500),
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      profileSection,
+                      const SizedBox(height: 40),
+                      actionSection,
+                    ],
+                  ),
+                ),
+              );
+            }
+          },
         ),
       ),
-    ),
     );
   }
 }
