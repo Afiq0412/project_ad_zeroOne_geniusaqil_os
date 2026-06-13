@@ -1,160 +1,171 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../providers/training_provider.dart';
 import '../models/training_model.dart';
-import '../services/training_service.dart';
 import 'training_form_view.dart';
 import 'yearly_report_view.dart';
 
 class TrainingDashboardView extends StatelessWidget {
-  final String teacherId; // Assigned identifier context
-  final String userRole;  // 'Teacher' or 'Admin'
-  final TrainingService _service = TrainingService();
-
-  TrainingDashboardView({Key? key, required this.teacherId, required this.userRole}) : super(key: key);
+  const TrainingDashboardView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    int currentYear = DateTime.now().year;
+    final user = Provider.of<AuthProvider>(context, listen: false).currentUserModel!;
+    final bool isPrincipal = user.role.toLowerCase() == 'principal' || user.role.toLowerCase() == 'admin';
+    final trainingProvider = Provider.of<TrainingProvider>(context, listen: false);
 
-    return StreamBuilder<List<TrainingModel>>(
-      stream: userRole == 'Admin' ? _service.streamAllTrainings() : _service.streamTeacherTrainings(teacherId),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
-        }
-
-        List<TrainingModel> items = snapshot.data ?? [];
-        
-        // Count entries logged in the current calendar year
-        int currentYearCount = items.where((element) => element.date.year == currentYear).length;
-        double complianceProgress = (currentYearCount / 3.0).clamp(0.0, 1.0); // Target criteria metric = 3
-
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(userRole == 'Admin' ? '✨ Principal Dashboard' : '🌟 My Learning Journey'),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.auto_awesome_mosaic_rounded, size: 28),
-                tooltip: 'Yearly Summary',
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => YearlyReportView(logs: items)),
-                ),
-              ),
-              const SizedBox(width: 8),
-            ],
-          ),
-          body: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Friendly Greeting
-                Text(
-                  userRole == 'Admin' ? 'Hello, Principal! 👋' : 'Welcome back, Teacher! 🍎',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.orange.shade900),
-                ),
-                const SizedBox(height: 16),
-                
-                // Bubbly Progress Card
-                Card(
-                  color: Colors.white,
-                  child: Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.emoji_events_rounded, color: Colors.amber, size: 28),
-                            const SizedBox(width: 8),
-                            Text('$currentYear Learning Goals', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'You have completed $currentYearCount out of 3 sessions!',
-                          style: TextStyle(fontSize: 15, color: Colors.grey.shade700),
-                        ),
-                        const SizedBox(height: 16),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(12), // Soft, rounded progress bar
-                          child: LinearProgressIndicator(
-                            value: complianceProgress,
-                            minHeight: 18,
-                            backgroundColor: Colors.orange.shade100,
-                            color: complianceProgress >= 1.0 ? Colors.green.shade400 : Colors.orangeAccent,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                
-                Text('Recent Adventures 📚', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.orange.shade900)),
-                const SizedBox(height: 12),
-                
-                // History List
-                Expanded(
-                  child: items.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.nature_people_rounded, size: 64, color: Colors.orange.shade200),
-                              const SizedBox(height: 16),
-                              Text('No activities yet. Let\'s learn something new!', style: TextStyle(color: Colors.grey.shade600, fontSize: 16)),
-                            ],
-                          ),
-                        )
-                      : ListView.builder(
-                          itemCount: items.length,
-                          itemBuilder: (context, index) {
-                            final log = items[index];
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              color: Colors.white,
-                              child: ListTile(
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                leading: CircleAvatar(
-                                  backgroundColor: Colors.orange.shade100,
-                                  child: Icon(Icons.school_rounded, color: Colors.orange.shade700),
-                                ),
-                                title: Text(log.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                subtitle: Text('${log.category}\n${DateFormat('MMM dd, yyyy').format(log.date)}'),
-                                isThreeLine: true,
-                                trailing: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: Colors.green.shade50,
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Text('${log.duration} hrs', style: TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.bold)),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                )
-              ],
+    return Scaffold(
+      backgroundColor: const Color(0xFFF3F4F6),
+      appBar: AppBar(
+        title: Text(
+          isPrincipal ? 'Principal Dashboard' : 'My Learning Journey',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        iconTheme: const IconThemeData(color: Colors.white),
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.auto_awesome_mosaic_rounded, size: 24),
+            tooltip: 'Yearly Summary',
+            onPressed: () => Navigator.push(
+              context,
+              // Ideally you would pass actual logs here rather than an empty array if you pre-fetch them.
+              MaterialPageRoute(builder: (_) => const YearlyReportView(logs: [])), 
             ),
           ),
-          floatingActionButton: userRole == 'Teacher'
-              ? FloatingActionButton.extended(
-                  backgroundColor: Colors.orange.shade600,
-                  foregroundColor: Colors.white,
-                  icon: const Icon(Icons.add_reaction_rounded),
-                  label: const Text('Add Activity', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => TrainingFormView(teacherId: teacherId)),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: StreamBuilder<List<TrainingModel>>(
+            stream: isPrincipal 
+                ? trainingProvider.streamAllTrainings() 
+                : trainingProvider.streamTeacherTrainings(user.id),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (snapshot.hasError) {
+                return Center(
+                  child: Text(
+                    'Failed to load activities.\n${snapshot.error}',
+                    style: GoogleFonts.inter(color: Colors.red.shade400),
+                    textAlign: TextAlign.center,
                   ),
-                )
-              : null,
-        );
-      },
+                );
+              }
+
+              List<TrainingModel> items = snapshot.data ?? [];
+              
+              if (items.isEmpty) {
+                 return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.check_circle_outline, size: 80, color: Colors.green.withOpacity(0.5)),
+                      const SizedBox(height: 16),
+                      Text('No training logs yet.', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                );
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: items.length,
+                itemBuilder: (context, index) {
+                  final log = items[index];
+                  return Card(
+                    elevation: 0,
+                    margin: const EdgeInsets.only(bottom: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(color: Colors.grey.shade200),
+                    ),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.all(16),
+                      title: Text(
+                        log.title,
+                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 4),
+                          Text(
+                            'Category: ${log.category}\nDate: ${DateFormat('MMM d, yyyy').format(log.date)}',
+                            style: GoogleFonts.inter(color: Colors.grey.shade600, fontSize: 14),
+                          ),
+                        ],
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: Icon(Icons.delete_outline, color: Colors.red.shade400),
+                            onPressed: () => _confirmDelete(context, trainingProvider, log),
+                          ),
+                          Icon(Icons.chevron_right, color: Colors.grey.shade400),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ),
+      floatingActionButton: !isPrincipal
+          ? FloatingActionButton.extended(
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.add_rounded),
+              label: Text('Add Activity', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const TrainingFormView()),
+              ),
+            )
+          : null,
+    );
+  }
+
+  void _confirmDelete(BuildContext context, TrainingProvider provider, TrainingModel log) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Delete Log?', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        content: Text('Are you sure you want to delete "${log.title}"? This cannot be undone.', style: GoogleFonts.inter()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel', style: GoogleFonts.inter(color: Colors.grey.shade600)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade400),
+            onPressed: () async {
+              Navigator.pop(ctx); 
+              if (log.id != null) {
+                bool success = await provider.deleteTraining(log.id!);
+                if (success && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Log deleted successfully', style: GoogleFonts.inter())),
+                  );
+                }
+              }
+            },
+            child: Text('Delete', style: GoogleFonts.inter(color: Colors.white)),
+          ),
+        ],
+      ),
     );
   }
 }
