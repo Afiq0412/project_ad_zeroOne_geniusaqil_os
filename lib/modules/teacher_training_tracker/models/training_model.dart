@@ -12,7 +12,7 @@ class TrainingModel {
   final String venue;
   final String reflection;
   final String? certificateUrl;
-  final String? photoUrl;
+  final List<String>? photoUrls; // 👈 Updated to support multiple photos
   final DateTime createdAt;
 
   TrainingModel({
@@ -27,12 +27,19 @@ class TrainingModel {
     required this.venue,
     required this.reflection,
     this.certificateUrl,
-    this.photoUrl,
+    this.photoUrls, // 👈 Updated
     required this.createdAt,
   });
 
-  // Converts the data from Firestore into our Flutter Model
   factory TrainingModel.fromJson(Map<String, dynamic> json, String documentId) {
+    // Gracefully handle old data where photoUrl was a single string
+    List<String>? parsedPhotos;
+    if (json['photoUrls'] != null) {
+      parsedPhotos = List<String>.from(json['photoUrls']);
+    } else if (json['photoUrl'] != null) {
+      parsedPhotos = [json['photoUrl']];
+    }
+
     return TrainingModel(
       id: documentId,
       teacherId: json['teacherId'] ?? '',
@@ -45,12 +52,11 @@ class TrainingModel {
       venue: json['venue'] ?? '',
       reflection: json['reflection'] ?? '',
       certificateUrl: json['certificateUrl'],
-      photoUrl: json['photoUrl'],
+      photoUrls: parsedPhotos, // 👈 Updated
       createdAt: (json['createdAt'] as Timestamp).toDate(),
     );
   }
 
-  // Converts our Flutter Model into data Firestore can save
   Map<String, dynamic> toJson() {
     return {
       'teacherId': teacherId,
@@ -63,7 +69,7 @@ class TrainingModel {
       'venue': venue,
       'reflection': reflection,
       'certificateUrl': certificateUrl,
-      'photoUrl': photoUrl,
+      'photoUrls': photoUrls, // 👈 Updated
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }

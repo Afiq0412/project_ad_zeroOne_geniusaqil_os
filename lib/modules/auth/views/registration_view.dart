@@ -16,7 +16,7 @@ class _RegistrationViewState extends State<RegistrationView> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  String _selectedRole = 'Teacher';
+  final String _selectedRole = 'Teacher';
 
   @override
   void dispose() {

@@ -13,16 +13,20 @@ class TrainingDashboardView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = Provider.of<AuthProvider>(context, listen: false).currentUserModel!;
-    final bool isPrincipal = user.role.toLowerCase() == 'principal' || user.role.toLowerCase() == 'admin';
-    final trainingProvider = Provider.of<TrainingProvider>(context, listen: false);
+    final user =
+        Provider.of<AuthProvider>(context, listen: false).currentUserModel!;
+    final bool isPrincipal = user.role.toLowerCase() == 'principal' ||
+        user.role.toLowerCase() == 'admin';
+    final trainingProvider =
+        Provider.of<TrainingProvider>(context, listen: false);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F6),
       appBar: AppBar(
         title: Text(
-          isPrincipal ? 'Principal Dashboard' : 'My Learning Journey',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white),
+          isPrincipal ? 'Principal Dashboard' : 'Learning Journey',
+          style: GoogleFonts.outfit(
+              fontWeight: FontWeight.bold, color: Colors.white),
         ),
         backgroundColor: Theme.of(context).colorScheme.primary,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -34,7 +38,8 @@ class TrainingDashboardView extends StatelessWidget {
             onPressed: () => Navigator.push(
               context,
               // Ideally you would pass actual logs here rather than an empty array if you pre-fetch them.
-              MaterialPageRoute(builder: (_) => const YearlyReportView(logs: [])), 
+              MaterialPageRoute(
+                  builder: (_) => const YearlyReportView(logs: [])),
             ),
           ),
           const SizedBox(width: 8),
@@ -44,8 +49,8 @@ class TrainingDashboardView extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 800),
           child: StreamBuilder<List<TrainingModel>>(
-            stream: isPrincipal 
-                ? trainingProvider.streamAllTrainings() 
+            stream: isPrincipal
+                ? trainingProvider.streamAllTrainings()
                 : trainingProvider.streamTeacherTrainings(user.id),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
@@ -63,15 +68,18 @@ class TrainingDashboardView extends StatelessWidget {
               }
 
               List<TrainingModel> items = snapshot.data ?? [];
-              
+
               if (items.isEmpty) {
-                 return Center(
+                return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.check_circle_outline, size: 80, color: Colors.green.withOpacity(0.5)),
+                      Icon(Icons.check_circle_outline,
+                          size: 80, color: Colors.green.withOpacity(0.5)),
                       const SizedBox(height: 16),
-                      Text('No training logs yet.', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold)),
+                      Text('No training logs yet.',
+                          style: GoogleFonts.outfit(
+                              fontSize: 24, fontWeight: FontWeight.bold)),
                     ],
                   ),
                 );
@@ -90,10 +98,19 @@ class TrainingDashboardView extends StatelessWidget {
                       side: BorderSide(color: Colors.grey.shade200),
                     ),
                     child: ListTile(
+                      onTap: () {
+                        // 👈 Opens the form with the existing log data!
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => TrainingFormView(logToEdit: log)),
+                        );
+                      },
                       contentPadding: const EdgeInsets.all(16),
                       title: Text(
                         log.title,
-                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
+                        style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -101,7 +118,8 @@ class TrainingDashboardView extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text(
                             'Category: ${log.category}\nDate: ${DateFormat('MMM d, yyyy').format(log.date)}',
-                            style: GoogleFonts.inter(color: Colors.grey.shade600, fontSize: 14),
+                            style: GoogleFonts.inter(
+                                color: Colors.grey.shade600, fontSize: 14),
                           ),
                         ],
                       ),
@@ -109,10 +127,13 @@ class TrainingDashboardView extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            icon: Icon(Icons.delete_outline, color: Colors.red.shade400),
-                            onPressed: () => _confirmDelete(context, trainingProvider, log),
+                            icon: Icon(Icons.delete_outline,
+                                color: Colors.red.shade400),
+                            onPressed: () =>
+                                _confirmDelete(context, trainingProvider, log),
                           ),
-                          Icon(Icons.chevron_right, color: Colors.grey.shade400),
+                          Icon(Icons.chevron_right,
+                              color: Colors.grey.shade400),
                         ],
                       ),
                     ),
@@ -128,7 +149,8 @@ class TrainingDashboardView extends StatelessWidget {
               backgroundColor: Theme.of(context).colorScheme.primary,
               foregroundColor: Colors.white,
               icon: const Icon(Icons.add_rounded),
-              label: Text('Add Activity', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+              label: Text('Add Activity',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
               onPressed: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const TrainingFormView()),
@@ -138,31 +160,40 @@ class TrainingDashboardView extends StatelessWidget {
     );
   }
 
-  void _confirmDelete(BuildContext context, TrainingProvider provider, TrainingModel log) {
+  void _confirmDelete(
+      BuildContext context, TrainingProvider provider, TrainingModel log) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Delete Log?', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-        content: Text('Are you sure you want to delete "${log.title}"? This cannot be undone.', style: GoogleFonts.inter()),
+        title: Text('Delete Log?',
+            style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        content: Text(
+            'Are you sure you want to delete "${log.title}"? This cannot be undone.',
+            style: GoogleFonts.inter()),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel', style: GoogleFonts.inter(color: Colors.grey.shade600)),
+            child: Text('Cancel',
+                style: GoogleFonts.inter(color: Colors.grey.shade600)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade400),
+            style:
+                ElevatedButton.styleFrom(backgroundColor: Colors.red.shade400),
             onPressed: () async {
-              Navigator.pop(ctx); 
+              Navigator.pop(ctx);
               if (log.id != null) {
                 bool success = await provider.deleteTraining(log.id!);
                 if (success && context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Log deleted successfully', style: GoogleFonts.inter())),
+                    SnackBar(
+                        content: Text('Log deleted successfully',
+                            style: GoogleFonts.inter())),
                   );
                 }
               }
             },
-            child: Text('Delete', style: GoogleFonts.inter(color: Colors.white)),
+            child:
+                Text('Delete', style: GoogleFonts.inter(color: Colors.white)),
           ),
         ],
       ),

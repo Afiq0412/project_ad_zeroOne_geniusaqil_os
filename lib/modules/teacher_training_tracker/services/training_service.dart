@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../models/training_model.dart';
@@ -7,13 +7,14 @@ class TrainingService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
-  // Upload document or photo asset to Firebase Storage
-  Future<String?> uploadFile(File file, String folder, String filename) async {
+  // Upload document or photo asset to Firebase Storage using Web-Safe Bytes
+  Future<String?> uploadFile(Uint8List fileBytes, String folder, String filename) async {
     try {
       Reference ref = _storage.ref().child(
         'teacher_trainings/$folder/$filename',
       );
-      UploadTask uploadTask = ref.putFile(file);
+      // Use putData for bytes instead of putFile
+      UploadTask uploadTask = ref.putData(fileBytes);
       TaskSnapshot snapshot = await uploadTask;
       return await snapshot.ref.getDownloadURL();
     } catch (e) {
