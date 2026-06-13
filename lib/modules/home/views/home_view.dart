@@ -118,6 +118,7 @@ class HomeView extends StatelessWidget {
                     size: 50,
                     color: Theme.of(context).colorScheme.primary,
                   ),
+                  textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
                 Text(
