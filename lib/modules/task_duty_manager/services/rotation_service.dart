@@ -16,7 +16,7 @@ class RotationService {
   static const String _trackerCol = 'duty_rotation_tracker';
 
   /// Single-query approach: loads all approved leaves once and returns
-  /// Map<dayName, Set<teacherUid>> for the 5 days of [weekStart]'s week.
+  /// Map[dayName, Set[teacherUid]] for the 5 days of [weekStart]'s week.
   /// Far more efficient than calling getTeachersOnLeave 5 separate times.
   Future<Map<String, Set<String>>> getOnLeaveMapForWeek(DateTime weekStart) async {
     final snap = await _db
@@ -201,5 +201,90 @@ class RotationService {
     }
 
     await batch.commit();
+  }
+
+  /// Fetches all documents from duty_rotation_tracker.
+  Future<List<RotationTrackerModel>> getRotationData() async {
+    final snap = await _db.collection(_trackerCol).get();
+    return snap.docs
+        .map((d) => RotationTrackerModel.fromMap(d.data(), d.id))
+        .toList();
+  }
+
+  /// Loops through all assignments in a published schedule and increments tracker counts.
+  Future<void> updateRotationAfterPublish(
+      Map assignments, String dutyType, DateTime weekStart) async {
+    for (final dayKey in assignments.keys) {
+      final dayData = assignments[dayKey];
+      if (dayData is! Map) continue;
+
+      final offset = _dayOffset(dayKey.toString());
+      final assignedDate = weekStart.add(Duration(days: offset));
+
+      for (final zoneKey in dayData.keys) {
+        final zone = zoneKey.toString();
+        // Skip assembly sub theme as it is text, not a teacher UID
+        if (dutyType == DutyConstants.assembly && zone == DutyConstants.assemblySubThemeKey) {
+          continue;
+        }
+
+        final val = dayData[zoneKey];
+        if (val is List) {
+          for (final item in val) {
+            final uid = item.toString().trim();
+            if (uid.isNotEmpty && uid != 'Unassigned' && uid != 'UNASSIGNED') {
+              await upsertTrackerRecord(uid, dutyType, zone, assignedDate);
+            }
+          }
+        } else if (val is String) {
+          final uid = val.trim();
+          if (uid.isNotEmpty && uid != 'Unassigned' && uid != 'UNASSIGNED') {
+            await upsertTrackerRecord(uid, dutyType, zone, assignedDate);
+          }
+        }
+      }
+    }
+  }
+
+  /// Creates or updates a single tracker document.
+  Future<void> upsertTrackerRecord(
+      String teacherId, String dutyType, String zone, DateTime assignedDate) async {
+    final snap = await _db
+        .collection(_trackerCol)
+        .where('teacherId', isEqualTo: teacherId)
+        .where('dutyType', isEqualTo: dutyType)
+        .where('zone', isEqualTo: zone)
+        .limit(1)
+        .get();
+
+    final now = Timestamp.fromDate(assignedDate);
+
+    if (snap.docs.isEmpty) {
+      await _db.collection(_trackerCol).add({
+        'teacherId': teacherId,
+        'dutyType': dutyType,
+        'zone': zone,
+        'totalAssignments': 1,
+        'lastAssignedDate': now,
+      });
+    } else {
+      final doc = snap.docs.first;
+      final current = (doc.data()['totalAssignments'] as int?) ?? 0;
+      await doc.reference.update({
+        'totalAssignments': current + 1,
+        'lastAssignedDate': now,
+      });
+    }
+  }
+
+  int _dayOffset(String dayName) {
+    switch (dayName) {
+      case 'Monday': return 0;
+      case 'Tuesday': return 1;
+      case 'Wednesday': return 2;
+      case 'Thursday': return 3;
+      case 'Friday': return 4;
+      default: return 0;
+    }
   }
 }
