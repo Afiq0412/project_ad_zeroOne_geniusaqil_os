@@ -3,6 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../models/teacher_manage_model.dart';
 import '../providers/manage_teachers_provider.dart';
+import 'teacher_record_detail_view.dart';
+import 'teacher_record_form_view.dart';
 
 class ManageTeachersView extends StatelessWidget {
   const ManageTeachersView({super.key});
@@ -100,7 +102,6 @@ class ManageTeachersView extends StatelessWidget {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Summary header
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
                     child: Row(
@@ -138,8 +139,6 @@ class ManageTeachersView extends StatelessWidget {
                       ],
                     ),
                   ),
-
-                  // Teacher list
                   Expanded(
                     child: ListView.builder(
                       padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
@@ -164,7 +163,6 @@ class ManageTeachersView extends StatelessWidget {
     TeacherManageModel teacher,
     ManageTeachersProvider provider,
   ) {
-    // Generate initials from name (up to 2 chars)
     final nameParts =
         teacher.name.trim().split(' ').where((p) => p.isNotEmpty).toList();
     final initials = nameParts.length >= 2
@@ -180,104 +178,158 @@ class ManageTeachersView extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            // Avatar with initials
-            CircleAvatar(
-              radius: 28,
-              backgroundColor:
-                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
-              child: Text(
-                initials,
-                style: GoogleFonts.outfit(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => TeacherRecordDetailView(
+              teacherId: teacher.id,
+              canEdit: true,
+            ),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 28,
+                backgroundColor:
+                    Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
+                child: Text(
+                  initials,
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 14),
-
-            // Info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    teacher.name.isNotEmpty ? teacher.name : '(No name)',
-                    style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: const Color(0xFF1F2937),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(Icons.email_outlined,
-                          size: 14, color: Colors.grey.shade500),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          teacher.email,
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            color: Colors.grey.shade600,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  // Status badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: isActive
-                          ? Colors.green.withValues(alpha: 0.1)
-                          : Colors.orange.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      isActive ? 'Active' : (teacher.status ?? 'Unknown'),
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      teacher.name.isNotEmpty ? teacher.name : '(No name)',
+                      style: GoogleFonts.outfit(
                         fontWeight: FontWeight.bold,
-                        color: isActive ? Colors.green.shade700 : Colors.orange.shade800,
+                        fontSize: 16,
+                        color: const Color(0xFF1F2937),
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.email_outlined,
+                            size: 14, color: Colors.grey.shade500),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            teacher.email,
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: Colors.grey.shade600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: isActive
+                                ? Colors.green.withValues(alpha: 0.1)
+                                : Colors.orange.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            isActive ? 'Active' : (teacher.status ?? 'Unknown'),
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: isActive
+                                  ? Colors.green.shade700
+                                  : Colors.orange.shade800,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: teacher.isComplete
+                                ? Colors.blue.withValues(alpha: 0.1)
+                                : Colors.grey.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            teacher.isComplete ? 'Record Complete' : 'Incomplete',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: teacher.isComplete
+                                  ? Colors.blue.shade700
+                                  : Colors.grey.shade600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert, color: Colors.grey),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                onSelected: (value) {
+                  if (value == 'edit') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            TeacherRecordFormView(teacherId: teacher.id),
+                      ),
+                    );
+                  } else if (value == 'remove') {
+                    _confirmRemove(context, teacher, provider);
+                  }
+                },
+                itemBuilder: (_) => [
+                  PopupMenuItem(
+                    value: 'edit',
+                    child: Row(children: [
+                      const Icon(Icons.edit_outlined, size: 18),
+                      const SizedBox(width: 10),
+                      Text('Edit Record', style: GoogleFonts.inter()),
+                    ]),
+                  ),
+                  PopupMenuItem(
+                    value: 'remove',
+                    child: Row(children: [
+                      Icon(Icons.person_remove_outlined,
+                          size: 18, color: Colors.red.shade700),
+                      const SizedBox(width: 10),
+                      Text('Remove',
+                          style: GoogleFonts.inter(color: Colors.red.shade700)),
+                    ]),
                   ),
                 ],
               ),
-            ),
-
-            const SizedBox(width: 8),
-
-            // Remove button
-            OutlinedButton.icon(
-              onPressed: () => _confirmRemove(context, teacher, provider),
-              icon: const Icon(Icons.person_remove_outlined, size: 16),
-              label: Text(
-                'Remove',
-                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-              ),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.red.shade700,
-                side: BorderSide(color: Colors.red.shade300),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

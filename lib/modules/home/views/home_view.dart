@@ -8,6 +8,7 @@ import '../../leave_management/views/leave_history_view.dart';
 import '../../leave_management/views/admin_leave_approval_view.dart';
 import '../../leave_management/views/notification_view.dart';
 import '../../manage_teachers/views/manage_teachers_view.dart';
+import '../../manage_teachers/views/teacher_record_form_view.dart';
 import '../../task_duty_manager/views/duty_home_view.dart';
 import '../../teacher_training_tracker/views/training_dashboard_view.dart';
 
@@ -150,7 +151,52 @@ class HomeView extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 40),
-                // Placeholder for the Leave Management module
+
+                // My Profile card — all roles can view/edit their own record
+                Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(16),
+                    leading: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.deepPurple.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.account_circle_outlined,
+                        color: Colors.deepPurple,
+                      ),
+                    ),
+                    title: Text(
+                      'My Profile',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      'View and update your personal record and documents',
+                      style: GoogleFonts.inter(color: Colors.grey.shade600),
+                    ),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () {
+                      if (user == null) return;
+                      // Teachers go straight to the editable form;
+                      // Principals reach their own record the same way.
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              TeacherRecordFormView(teacherId: user.id),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Leave Management module
                 Card(
                   elevation: 2,
                   shape: RoundedRectangleBorder(
