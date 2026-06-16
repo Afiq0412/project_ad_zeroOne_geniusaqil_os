@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../constants/duty_constants.dart';
+import '../models/duty_schedule_model.dart';
 import '../providers/duty_provider.dart';
 import 'duty_assignment_picker.dart';
 
@@ -23,10 +24,51 @@ class _DutyRosterViewState extends State<DutyRosterView> {
     // Schedule loader after build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = Provider.of<DutyProvider>(context, listen: false);
-      provider.loadWeekSchedule();
+      provider.loadWeekSchedule().then((_) {
+        provider.checkAndFlagConflicts(provider.currentWeekStart);
+      });
       provider.setSelectedDay(provider.selectedDay);
       _loadTeacherNames();
     });
+  }
+
+  /// Returns true if the selected day is today or in the future AND duty hours
+  /// have not yet ended — meaning the Auto-Generate button should be shown.
+  bool _isDayActionable(String dayName, DateTime weekStart) {
+    final now = DateTime.now();
+    final todayWeekStart = DutyScheduleModel.weekStartFor(now);
+
+    // If viewing next week, all days are actionable
+    if (weekStart.isAfter(todayWeekStart)) return true;
+
+    // If viewing current week, check day
+    final Map<String, int> dayOffsets = {
+      'Monday': 0,
+      'Tuesday': 1,
+      'Wednesday': 2,
+      'Thursday': 3,
+      'Friday': 4,
+    };
+
+    final offset = dayOffsets[dayName] ?? 0;
+    final selectedDate = weekStart.add(Duration(days: offset));
+
+    // If selected day is before today (date only comparison) → not actionable
+    final todayDate = DateTime(now.year, now.month, now.day);
+    final selectedDateOnly = DateTime(
+        selectedDate.year, selectedDate.month, selectedDate.day);
+
+    if (selectedDateOnly.isBefore(todayDate)) return false;
+
+    // If selected day is today, check if last duty has ended
+    // Last duty ends at 5:15 PM (17:15)
+    if (selectedDateOnly.isAtSameMomentAs(todayDate)) {
+      final lastDutyEnd =
+          DateTime(now.year, now.month, now.day, 17, 15);
+      if (now.isAfter(lastDutyEnd)) return false;
+    }
+
+    return true;
   }
 
   Future<void> _loadTeacherNames() async {
@@ -303,7 +345,17 @@ class _DutyRosterViewState extends State<DutyRosterView> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           IconButton(
-                            onPressed: provider.isViewingPastWeek ? null : provider.previousWeek,
+                            onPressed: provider.isViewingPastWeek
+                                ? null
+                                : () {
+                                    provider.previousWeek();
+                                    Future.delayed(
+                                        const Duration(milliseconds: 500),
+                                        () {
+                                      provider.checkAndFlagConflicts(
+                                          provider.currentWeekStart);
+                                    });
+                                  },
                             icon: Icon(
                               Icons.chevron_left,
                               color: provider.isViewingPastWeek
@@ -359,7 +411,17 @@ class _DutyRosterViewState extends State<DutyRosterView> {
                             ),
                           ),
                           IconButton(
-                            onPressed: provider.isViewingFutureWeek ? null : provider.nextWeek,
+                            onPressed: provider.isViewingFutureWeek
+                                ? null
+                                : () {
+                                    provider.nextWeek();
+                                    Future.delayed(
+                                        const Duration(milliseconds: 500),
+                                        () {
+                                      provider.checkAndFlagConflicts(
+                                          provider.currentWeekStart);
+                                    });
+                                  },
                             icon: Icon(
                               Icons.chevron_right,
                               color: provider.isViewingFutureWeek
@@ -405,6 +467,248 @@ class _DutyRosterViewState extends State<DutyRosterView> {
                               ),
                             ),
                           ],
+                        ),
+                      ),
+                    ),
+
+                  // 1c. Smart conflict banner
+                  if (provider.isCheckingConflicts)
+                    Padding(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      child: Card(
+                        color: Colors.blue.shade50,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: Colors.blue.shade200),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.blue.shade700,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Checking schedule for conflicts...',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: Colors.blue.shade800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  if (!provider.isCheckingConflicts && provider.hasConflicts)
+                    Padding(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      child: Card(
+                        color: Colors.orange.shade50,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: Colors.orange.shade300),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.warning_amber_rounded,
+                                      color: Colors.orange.shade700, size: 20),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      '⚠️ ${provider.conflictSlots.length} schedule conflict(s) detected',
+                                      style: GoogleFonts.inter(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                        color: Colors.orange.shade900,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Some teachers are on leave or slots are unassigned. Tap below to auto-fix affected days only.',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: Colors.orange.shade800,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  // Show conflict details expandable
+                                  Expanded(
+                                    child: Theme(
+                                      data: Theme.of(context).copyWith(
+                                          dividerColor: Colors.transparent),
+                                      child: ExpansionTile(
+                                        tilePadding: EdgeInsets.zero,
+                                        title: Text(
+                                          'View conflicts',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 12,
+                                            color: Colors.orange.shade700,
+                                            fontWeight: FontWeight.w600,
+                                            decoration:
+                                                TextDecoration.underline,
+                                          ),
+                                        ),
+                                        iconColor: Colors.orange.shade700,
+                                        collapsedIconColor:
+                                            Colors.orange.shade700,
+                                        children:
+                                            provider.conflictSlots.map((conflict) {
+                                          return Padding(
+                                            padding: const EdgeInsets.only(
+                                                bottom: 4),
+                                            child: Row(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Icon(
+                                                  conflict['type'] ==
+                                                          'leave_conflict'
+                                                      ? Icons.person_off
+                                                      : Icons.assignment_late,
+                                                  size: 14,
+                                                  color:
+                                                      Colors.orange.shade700,
+                                                ),
+                                                const SizedBox(width: 6),
+                                                Expanded(
+                                                  child: Text(
+                                                    conflict['message']
+                                                        as String,
+                                                    style: GoogleFonts.inter(
+                                                      fontSize: 11,
+                                                      color: Colors
+                                                          .orange.shade900,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  // Auto-fix button
+                                  ElevatedButton.icon(
+                                    onPressed: provider.isGenerating
+                                        ? null
+                                        : () async {
+                                            final messenger =
+                                                ScaffoldMessenger.of(context);
+                                            await provider.autoFixConflicts(
+                                                provider.currentWeekStart);
+                                            if (mounted) {
+                                              messenger.showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    'Conflicts auto-fixed successfully!',
+                                                    style: GoogleFonts.inter(
+                                                        fontWeight:
+                                                            FontWeight.w500),
+                                                  ),
+                                                  backgroundColor:
+                                                      Colors.green.shade700,
+                                                  behavior:
+                                                      SnackBarBehavior.floating,
+                                                  shape: RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              10)),
+                                                ),
+                                              );
+                                            }
+                                          },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.orange.shade700,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 8),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8)),
+                                      elevation: 0,
+                                    ),
+                                    icon: provider.isGenerating
+                                        ? const SizedBox(
+                                            width: 14,
+                                            height: 14,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                        : const Icon(Icons.auto_fix_high,
+                                            size: 14),
+                                    label: Text(
+                                      'Auto-Fix',
+                                      style: GoogleFonts.inter(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  if (!provider.isCheckingConflicts &&
+                      !provider.hasConflicts &&
+                      provider.allSchedules.isNotEmpty)
+                    Padding(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      child: Card(
+                        color: Colors.green.shade50,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: Colors.green.shade200),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
+                          child: Row(
+                            children: [
+                              Icon(Icons.check_circle_outline,
+                                  color: Colors.green.shade700, size: 18),
+                              const SizedBox(width: 8),
+                              Text(
+                                '✅ Schedule looks good — no conflicts detected',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: Colors.green.shade800,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -522,8 +826,10 @@ class _DutyRosterViewState extends State<DutyRosterView> {
                     ),
                   ),
 
-                  // 4. Per-Day Auto-Generate Button — hidden in read-only mode
-                  if (!provider.isReadOnly)
+                  // 4. Per-Day Auto-Generate Button — hidden in read-only mode and for past/completed days
+                  if (!provider.isReadOnly &&
+                      _isDayActionable(
+                          provider.selectedDay, currentWeek))
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       child: SizedBox(

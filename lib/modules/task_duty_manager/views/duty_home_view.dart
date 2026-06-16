@@ -7,8 +7,9 @@ import '../constants/duty_constants.dart';
 import '../models/duty_schedule_model.dart';
 import '../providers/duty_provider.dart';
 import 'duty_roster_view.dart';
-import 'my_duty_view.dart';
 import 'duty_tracker_view.dart';
+import 'duty_performance_view.dart';
+import 'my_duty_view.dart';
 
 class DutyHomeView extends StatefulWidget {
   const DutyHomeView({super.key});
@@ -404,6 +405,20 @@ class _PrincipalView extends StatelessWidget {
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const DutyTrackerView()),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // 4. Monthly Performance card
+            _NavCard(
+              title: 'Monthly Performance',
+              subtitle: "Track each teacher's duty completion this month",
+              iconData: Icons.bar_chart,
+              iconBgColor: const Color(0xFF7B3FC4), // purple
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const DutyPerformanceView()),
               ),
             ),
           ],

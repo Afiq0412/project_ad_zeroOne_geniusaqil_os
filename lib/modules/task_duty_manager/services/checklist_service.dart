@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/checklist_log_model.dart';
 import '../constants/duty_constants.dart';
 
@@ -164,9 +165,52 @@ class ChecklistService {
     return _createChecklistLogModel(log);
   }
 
+  /// Marks a duty as Done directly by document ID.
+  /// This is the preferred method when the log document ID is already known
+  /// (e.g. from the active stream in [DutyProvider._currentChecklistLog]).
+  /// Avoids a re-query that may match the wrong or a newly created document.
+  Future<void> markAsDoneById(String logId) async {
+    final now = Timestamp.fromDate(DateTime.now());
+    await _db.collection(_col).doc(logId).update({
+      'status': 'Completed',
+      'startedAt': now,
+      'completedAt': now,
+    });
+  }
+
   /// Marks a duty as Done with a single toggle (for non-Cleaning duties).
   /// Creates the log if it doesn't exist, or updates the existing one.
-  Future<void> markAsDone(String teacherId, String zone, String dutyType, DateTime date) async {
+  /// Prefers [scheduleId]-based lookup to stay consistent with how logs are
+  /// created ([getOrCreateChecklistLog]) and streamed ([streamChecklistLog]).
+  Future<void> markAsDone(
+    String teacherId,
+    String zone,
+    String dutyType,
+    DateTime date, {
+    String scheduleId = '',
+  }) async {
+    final now = Timestamp.fromDate(DateTime.now());
+
+    // Fast path: look up by scheduleId + zone + teacherId (same index as stream)
+    if (scheduleId.isNotEmpty) {
+      final snap = await _db
+          .collection(_col)
+          .where('teacherId', isEqualTo: teacherId)
+          .where('scheduleId', isEqualTo: scheduleId)
+          .where('zone', isEqualTo: zone)
+          .limit(1)
+          .get();
+
+      if (snap.docs.isNotEmpty) {
+        await _db.collection(_col).doc(snap.docs.first.id).update({
+          'status': 'Completed',
+          'completedAt': now,
+        });
+        return;
+      }
+    }
+
+    // Fallback: date-range query (kept for backward compatibility)
     final start = DateTime(date.year, date.month, date.day);
     final end = start.add(const Duration(days: 1));
     final snap = await _db
@@ -179,11 +223,10 @@ class ChecklistService {
         .limit(1)
         .get();
 
-    final now = Timestamp.fromDate(DateTime.now());
-
     if (snap.docs.isEmpty) {
+      // No log exists yet — create one so the stream picks it up
       await _db.collection(_col).add({
-        'scheduleId': '',
+        'scheduleId': scheduleId,
         'teacherId': teacherId,
         'teacherName': '',
         'dutyType': dutyType,
@@ -199,6 +242,35 @@ class ChecklistService {
         'status': 'Completed',
         'completedAt': now,
       });
+    }
+  }
+
+  /// Fetches all checklist logs for a specific teacher for a given month.
+  /// Used by the Monthly Performance screen to compute per-teacher statistics.
+  Future<List<ChecklistLogModel>> getLogsForTeacherAndMonth({
+    required String teacherId,
+    required int year,
+    required int month,
+  }) async {
+    try {
+      final startDate = DateTime(year, month, 1);
+      // month + 1 handles December → January of next year automatically
+      final endDate = DateTime(year, month + 1, 1);
+
+      final snapshot = await _db
+          .collection(_col)
+          .where('teacherId', isEqualTo: teacherId)
+          .where('assignedDate',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+          .where('assignedDate', isLessThan: Timestamp.fromDate(endDate))
+          .get();
+
+      return snapshot.docs
+          .map((doc) => ChecklistLogModel.fromMap(doc.data(), doc.id))
+          .toList();
+    } catch (e) {
+      debugPrint('Get logs for month error: $e');
+      return [];
     }
   }
 }

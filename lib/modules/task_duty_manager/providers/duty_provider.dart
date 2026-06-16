@@ -32,6 +32,15 @@ class DutyProvider extends ChangeNotifier {
   bool get isGenerating => _isGenerating;
   List<String> get unassignedSlots => _unassignedSlots;
 
+  // ── Conflict Detection State ─────────────────────────────────
+  List<Map<String, dynamic>> _conflictSlots = [];
+  bool _hasConflicts = false;
+  bool _isCheckingConflicts = false;
+
+  List<Map<String, dynamic>> get conflictSlots => _conflictSlots;
+  bool get hasConflicts => _hasConflicts;
+  bool get isCheckingConflicts => _isCheckingConflicts;
+
   // ── Day-by-Day Roster State ──────────────────────────────────
   String _selectedDay = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'][
       (DateTime.now().weekday >= 1 && DateTime.now().weekday <= 5)
@@ -239,15 +248,16 @@ class DutyProvider extends ChangeNotifier {
     try {
       await _checklistSubscription?.cancel();
 
-      if (DutyConstants.hasChecklist(dutyType, zone)) {
-        await _checklistService.getOrCreateChecklistLog(
-          teacherId: teacherId,
-          scheduleId: scheduleId,
-          dutyType: dutyType,
-          zone: zone,
-          assignedDate: date,
-        );
-      }
+      // Always ensure a log document exists — for Cleaning duties this
+      // pre-populates all checklist items; for other duties it creates an empty
+      // 'Pending' document so markAsDoneForCurrent() can find it via the stream.
+      await _checklistService.getOrCreateChecklistLog(
+        teacherId: teacherId,
+        scheduleId: scheduleId,
+        dutyType: dutyType,
+        zone: zone,
+        assignedDate: date,
+      );
 
       _checklistSubscription = _checklistService
           .streamChecklistLog(
@@ -286,12 +296,20 @@ class DutyProvider extends ChangeNotifier {
   Future<void> markAsDoneForCurrent() async {
     if (_currentChecklistLog == null) return;
     try {
-      await _checklistService.markAsDone(
-        _currentChecklistLog!.teacherId,
-        _currentChecklistLog!.zone,
-        _currentChecklistLog!.dutyType,
-        _currentChecklistLog!.assignedDate,
-      );
+      // Use the document ID directly — avoids a stale date-range re-query
+      // that can write to a different document than the one the stream watches.
+      if (_currentChecklistLog!.id.isNotEmpty) {
+        await _checklistService.markAsDoneById(_currentChecklistLog!.id);
+      } else {
+        // Fallback for edge case where id is unknown (should not happen in normal flow)
+        await _checklistService.markAsDone(
+          _currentChecklistLog!.teacherId,
+          _currentChecklistLog!.zone,
+          _currentChecklistLog!.dutyType,
+          _currentChecklistLog!.assignedDate,
+          scheduleId: _currentChecklistLog!.scheduleId,
+        );
+      }
     } catch (e) {
       debugPrint('Mark As Done Error: $e');
     }
@@ -534,6 +552,134 @@ class DutyProvider extends ChangeNotifier {
     }
   }
 
+  /// Checks current and next week schedules for conflicts:
+  /// - Teacher assigned to a duty but has approved leave that day
+  /// - Days with zero assignments (unplanned)
+  /// Only checks published or draft schedules — not empty weeks
+  Future<void> checkAndFlagConflicts(DateTime weekStart) async {
+    _isCheckingConflicts = true;
+    _conflictSlots = [];
+    notifyListeners();
+
+    try {
+      // Get leave map for the week
+      final leavesMap = await _scheduleService.getApprovedLeavesForWeek(weekStart);
+
+      // Get all teachers for name lookup
+      final allTeachers = await _rotationService.getActiveTeachers();
+      final Map<String, String> teacherNames = {
+        for (final t in allTeachers) t.id: t.name,
+      };
+
+      final List<Map<String, dynamic>> conflicts = [];
+
+      for (final type in DutyConstants.allDutyTypes) {
+        final sched = await _scheduleService.getWeekSchedule(weekStart, type);
+        if (sched == null) continue;
+
+        for (final day in DutyConstants.weekdays) {
+          // Skip assembly for non-Monday
+          if (type == DutyConstants.assembly && day != 'Monday') continue;
+
+          final onLeaveUIDs = leavesMap[day]?.toSet() ?? <String>{};
+          final dayData = sched.assignments[day] ?? {};
+
+          for (final zone in DutyConstants.zonesFor(type)) {
+            // Skip Sub Theme
+            if (type == DutyConstants.assembly &&
+                zone == DutyConstants.assemblySubThemeKey) {
+              continue;
+            }
+
+            final assigned = dayData[zone] ?? [];
+
+            // Check 1: Assigned teacher is on leave
+            for (final uid in assigned) {
+              if (uid == 'UNASSIGNED' || uid.isEmpty) continue;
+              if (onLeaveUIDs.contains(uid)) {
+                conflicts.add({
+                  'type': 'leave_conflict',
+                  'day': day,
+                  'zone': zone,
+                  'dutyType': type,
+                  'teacherId': uid,
+                  'teacherName': teacherNames[uid] ?? uid,
+                  'message': '${teacherNames[uid] ?? uid} is on leave on $day — $zone needs reassignment',
+                });
+              }
+            }
+
+            // Check 2: Slot is unassigned or empty
+            if (assigned.isEmpty || assigned.first == 'UNASSIGNED') {
+              conflicts.add({
+                'type': 'unassigned',
+                'day': day,
+                'zone': zone,
+                'dutyType': type,
+                'message': '$day — ${DutyConstants.displayName(type)}: $zone is unassigned',
+              });
+            }
+          }
+        }
+      }
+
+      _conflictSlots = conflicts;
+      _hasConflicts = conflicts.isNotEmpty;
+    } catch (e) {
+      debugPrint('Conflict check error: $e');
+    } finally {
+      _isCheckingConflicts = false;
+      notifyListeners();
+    }
+  }
+
+  /// Auto-generates ONLY for days that have conflicts — preserves clean days
+  Future<void> autoFixConflicts(DateTime weekStart) async {
+    _isGenerating = true;
+    notifyListeners();
+
+    try {
+      // Get unique days that have conflicts
+      final conflictDays = _conflictSlots
+          .map((c) => c['day'] as String)
+          .toSet()
+          .toList();
+
+      final List<String> allUnassigned = [];
+      for (final day in conflictDays) {
+        // Only regenerate actionable days (not past days)
+        final now = DateTime.now();
+        final todayWeekStart = DutyScheduleModel.weekStartFor(now);
+        final dayOffset = _dayOffset(day);
+        final targetDate = weekStart.add(Duration(days: dayOffset));
+        final todayDate = DateTime(now.year, now.month, now.day);
+        final targetDateOnly = DateTime(
+            targetDate.year, targetDate.month, targetDate.day);
+
+        // Skip past days
+        if (weekStart.isAtSameMomentAs(todayWeekStart) &&
+            targetDateOnly.isBefore(todayDate)) {
+          continue;
+        }
+
+        final unassigned = await _autoAssignService.generateForDay(weekStart, day);
+        allUnassigned.addAll(unassigned.map((s) => '$day - $s'));
+      }
+
+      _unassignedSlots = allUnassigned;
+      await loadWeekSchedule();
+
+      // Re-check conflicts after fixing
+      await checkAndFlagConflicts(weekStart);
+    } catch (e) {
+      debugPrint('Auto fix conflicts error: $e');
+      _errorMessage = e.toString();
+    } finally {
+      _isGenerating = false;
+      notifyListeners();
+    }
+  }
+
   // ── Checklist ────────────────────────────────────────────────
 
   /// Real-time stream of a teacher's checklist log for one zone.
@@ -597,7 +743,13 @@ class DutyProvider extends ChangeNotifier {
     required DateTime assignedDate,
   }) async {
     try {
-      await _checklistService.markAsDone(teacherId, zone, dutyType, assignedDate);
+      await _checklistService.markAsDone(
+        teacherId,
+        zone,
+        dutyType,
+        assignedDate,
+        scheduleId: scheduleId,
+      );
       return true;
     } catch (e) {
       debugPrint('Mark As Done Error: $e');
@@ -636,6 +788,201 @@ class DutyProvider extends ChangeNotifier {
     _isLoading = value;
     _errorMessage = error;
     notifyListeners();
+  }
+
+  // ── Monthly Performance ───────────────────────────────────────
+
+  List<DateTime> _getWeekStartsInMonth(int year, int month) {
+    final List<DateTime> weekStarts = [];
+    final firstDay = DateTime(year, month, 1);
+    final lastDay = DateTime(year, month + 1, 0);
+    
+    // Find first Monday of or before the month
+    DateTime current = firstDay;
+    while (current.weekday != DateTime.monday) {
+      current = current.subtract(const Duration(days: 1));
+    }
+    
+    // Collect all Mondays that overlap with the month
+    while (current.isBefore(lastDay) || current.isAtSameMomentAs(lastDay)) {
+      if (current.month == month || current.add(const Duration(days: 4)).month == month) {
+        weekStarts.add(current);
+      }
+      current = current.add(const Duration(days: 7));
+    }
+    return weekStarts;
+  }
+
+  /// Returns only the relevant week starts for performance analysis:
+  /// - For the current month: only current week and future weeks within the month
+  ///   (avoids counting "missed" duties from weeks before the app was in active use)
+  /// - For past months: all weeks (full historical data)
+  List<DateTime> _getRelevantWeekStarts(int year, int month) {
+    final now = DateTime.now();
+    final allWeeks = _getWeekStartsInMonth(year, month);
+
+    final isCurrentMonth = year == now.year && month == now.month;
+    if (!isCurrentMonth) return allWeeks;
+
+    // Current month — only count from current week start onwards
+    final currentWeekStart = DutyScheduleModel.weekStartFor(now);
+    return allWeeks.where((w) => !w.isBefore(currentWeekStart)).toList();
+  }
+
+  /// Fetches monthly performance data for all active teachers.
+  /// Returns a list sorted by completion rate descending.
+  Future<List<Map<String, dynamic>>> getMonthlyPerformance(
+      int year, int month) async {
+    try {
+      final allTeachers = await _rotationService.getActiveTeachers();
+      final weekStarts = _getRelevantWeekStarts(year, month);
+
+      // Fetch all published schedules for weeks overlapping the month
+      final List<DutyScheduleModel> publishedSchedules = [];
+      for (final weekStart in weekStarts) {
+        final weeklySchedules = await _scheduleService.getPublishedSchedulesForWeekOnce(weekStart);
+        publishedSchedules.addAll(weeklySchedules);
+      }
+
+      final List<Map<String, dynamic>> performance = [];
+
+      for (final teacher in allTeachers) {
+        final logs = await _checklistService.getLogsForTeacherAndMonth(
+          teacherId: teacher.id,
+          year: year,
+          month: month,
+        );
+
+        int completedCount = 0;
+        int inProgressCount = 0;
+        int missedCount = 0;
+        int upcomingCount = 0;
+        int totalAssigned = 0;
+
+        final Map<String, Map<String, int>> dutyBreakdown = {
+          'Cleaning': {'assigned': 0, 'completed': 0},
+          'Arrival': {'assigned': 0, 'completed': 0},
+          'Dismissal': {'assigned': 0, 'completed': 0},
+          'HalfFullDay': {'assigned': 0, 'completed': 0},
+          'Assembly': {'assigned': 0, 'completed': 0},
+        };
+
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+
+        // Scan all assignments across all published schedules this month
+        for (final schedule in publishedSchedules) {
+          final dutyType = schedule.dutyType;
+
+          for (final dayName in DutyConstants.weekdays) {
+            final dayAssignments = schedule.assignments[dayName] ?? {};
+            final dayOffset = _dayOffset(dayName);
+            final dutyDate = schedule.weekStart.add(Duration(days: dayOffset));
+
+            // Only count if this specific day falls within the target month
+            if (dutyDate.year == year && dutyDate.month == month) {
+              for (final zone in dayAssignments.keys) {
+                // Skip Assembly Sub Theme Key
+                if (dutyType == DutyConstants.assembly && zone == DutyConstants.assemblySubThemeKey) {
+                  continue;
+                }
+
+                final assignedTeachers = dayAssignments[zone] ?? [];
+                if (assignedTeachers.contains(teacher.id)) {
+                  totalAssigned++;
+
+                  // Find matching checklist log
+                  ChecklistLogModel? matchingLog;
+                  for (final log in logs) {
+                    if (log.dutyType == dutyType &&
+                        log.zone == zone &&
+                        log.assignedDate.year == dutyDate.year &&
+                        log.assignedDate.month == dutyDate.month &&
+                        log.assignedDate.day == dutyDate.day) {
+                      matchingLog = log;
+                      break;
+                    }
+                  }
+
+                  bool isCompleted = false;
+                  final dutyDateOnly = DateTime(dutyDate.year, dutyDate.month, dutyDate.day);
+                  final isPast = dutyDateOnly.isBefore(today);
+
+                  if (matchingLog != null) {
+                    if (matchingLog.status == 'Completed') {
+                      completedCount++;
+                      isCompleted = true;
+                    } else if (matchingLog.status == 'InProgress' || matchingLog.status == 'in_progress') {
+                      inProgressCount++;
+                    } else {
+                      // Status is Pending or other
+                      if (isPast) {
+                        missedCount++;
+                      } else {
+                        upcomingCount++;
+                      }
+                    }
+                  } else {
+                    // No checklist log
+                    if (isPast) {
+                      missedCount++;
+                    } else {
+                      upcomingCount++;
+                    }
+                  }
+
+                  // Increment duty breakdown counts
+                  if (dutyBreakdown.containsKey(dutyType)) {
+                    dutyBreakdown[dutyType]!['assigned'] = dutyBreakdown[dutyType]!['assigned']! + 1;
+                    if (isCompleted) {
+                      dutyBreakdown[dutyType]!['completed'] = dutyBreakdown[dutyType]!['completed']! + 1;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        final divisor = totalAssigned - upcomingCount;
+        final completionRate = divisor <= 0 ? 0.0 : (completedCount / divisor * 100);
+
+        performance.add({
+          'teacherId': teacher.id,
+          'teacherName': teacher.name,
+          'totalAssigned': totalAssigned,
+          'completed': completedCount,
+          'inProgress': inProgressCount,
+          'missed': missedCount,
+          'upcoming': upcomingCount,
+          'completionRate': completionRate,
+          'grade': completionRate >= 90
+              ? 'Excellent'
+              : completionRate >= 70
+                  ? 'Good'
+                  : completionRate >= 50
+                      ? 'Fair'
+                      : 'Needs Attention',
+          'gradeColor': completionRate >= 90
+              ? 0xFF388E3C
+              : completionRate >= 70
+                  ? 0xFF1976D2
+                  : completionRate >= 50
+                      ? 0xFFF57C00
+                      : 0xFFD32F2F,
+          'dutyBreakdown': dutyBreakdown,
+        });
+      }
+
+      // Default sorting: completion rate descending
+      performance.sort((a, b) => (b['completionRate'] as double)
+          .compareTo(a['completionRate'] as double));
+
+      return performance;
+    } catch (e) {
+      debugPrint('Monthly performance error: $e');
+      return [];
+    }
   }
 
   @override
