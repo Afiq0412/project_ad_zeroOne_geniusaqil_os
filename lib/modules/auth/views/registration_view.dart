@@ -194,7 +194,7 @@ class _RegistrationViewState extends State<RegistrationView> {
                             borderSide: BorderSide(color: Colors.grey.shade300),
                           ),
                         ),
-                        items: ['Teacher', 'Principal']
+                        items: ['Teacher', 'Principal', 'Intern']
                             .map((role) => DropdownMenuItem(
                                   value: role,
                                   child: Text(role),

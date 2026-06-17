@@ -10,6 +10,7 @@ import '../services/rotation_service.dart';
 import '../services/auto_assign_service.dart';
 import '../../auth/models/user_model.dart';
 import '../constants/duty_constants.dart';
+import '../../leave_management/services/notification_service.dart';
 
 /// Single ChangeNotifier provider that wires together all three
 /// Task & Duty Manager services, following the same pattern as
@@ -19,6 +20,7 @@ class DutyProvider extends ChangeNotifier {
   final ChecklistService _checklistService = ChecklistService();
   final RotationService _rotationService = RotationService();
   final AutoAssignService _autoAssignService = AutoAssignService();
+  final NotificationService _notificationService = NotificationService();
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -1043,6 +1045,33 @@ class DutyProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('Monthly performance error: $e');
       return [];
+    }
+  }
+
+  /// Sends a duty reminder notification to a teacher.
+  Future<bool> sendDutyReminder({
+    required String teacherId,
+    required String principalId,
+    required String dutyType,
+    required String zone,
+    required String scheduleId,
+  }) async {
+    try {
+      final displayName = DutyConstants.displayName(dutyType);
+      await _notificationService.sendDutyReminderNotification(
+        receiverId: teacherId,
+        senderId: principalId,
+        title: 'Duty Reminder',
+        message: 'Please complete your $displayName at $zone.',
+        dutyType: displayName,
+        zone: zone,
+        scheduleId: scheduleId,
+        type: 'duty_reminder',
+      );
+      return true;
+    } catch (e) {
+      debugPrint('Error sending duty reminder: $e');
+      return false;
     }
   }
 

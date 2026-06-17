@@ -7,7 +7,7 @@ import '../../auth/views/login_view.dart';
 import '../../leave_management/views/leave_history_view.dart';
 import '../../leave_management/views/admin_leave_approval_view.dart';
 import '../../leave_management/views/notification_view.dart';
-import '../../manage_teachers/views/manage_teachers_view.dart';
+import '../../manage_users/views/manage_users_view.dart';
 import '../../task_duty_manager/views/duty_home_view.dart';
 import '../../teacher_training_tracker/views/training_dashboard_view.dart';
 
@@ -239,7 +239,7 @@ class HomeView extends StatelessWidget {
                     },
                   ),
                 ),
-                // Manage Teachers card — visible to Principal only
+                // Manage Users card — visible to Principal only
                 if (user?.role.toLowerCase() == 'principal') ...[
                   const SizedBox(height: 12),
                   Card(
@@ -252,7 +252,7 @@ class HomeView extends StatelessWidget {
                       leading: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.indigo.withOpacity(0.1),
+                          color: Colors.indigo.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -261,11 +261,11 @@ class HomeView extends StatelessWidget {
                         ),
                       ),
                       title: Text(
-                        'Manage Teachers',
+                        'Manage Users',
                         style: GoogleFonts.inter(fontWeight: FontWeight.bold),
                       ),
                       subtitle: Text(
-                        'View and manage all registered teachers',
+                        'View and manage all registered user accounts',
                         style: GoogleFonts.inter(color: Colors.grey.shade600),
                       ),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
@@ -273,7 +273,7 @@ class HomeView extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const ManageTeachersView(),
+                            builder: (context) => const ManageUsersView(),
                           ),
                         );
                       },

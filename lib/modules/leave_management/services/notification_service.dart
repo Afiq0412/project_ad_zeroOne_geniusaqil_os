@@ -29,6 +29,38 @@ class NotificationService {
     }
   }
 
+  // Send a new duty reminder notification with extra fields
+  Future<void> sendDutyReminderNotification({
+    required String receiverId,
+    required String senderId,
+    required String title,
+    required String message,
+    required String dutyType,
+    required String zone,
+    required String scheduleId,
+    required String type,
+  }) async {
+    try {
+      final String id = DateTime.now().millisecondsSinceEpoch.toString();
+      final newNotification = NotificationModel(
+        id: id,
+        userId: receiverId,
+        title: title,
+        message: message,
+        createdAt: DateTime.now(),
+        isRead: false,
+        type: type,
+        senderId: senderId,
+        dutyType: dutyType,
+        zone: zone,
+        scheduleId: scheduleId,
+      );
+      await _firestore.collection(collection).doc(id).set(newNotification.toMap());
+    } catch (e) {
+      print('Failed to send duty reminder notification: $e');
+    }
+  }
+
   // Stream of notifications for a specific user
   Stream<List<NotificationModel>> getUserNotifications(String userId) {
     return _firestore

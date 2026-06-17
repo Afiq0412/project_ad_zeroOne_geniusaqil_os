@@ -25,7 +25,14 @@ class AuthProvider extends ChangeNotifier {
     try {
       final firebaseUser = _authService.currentUser;
       if (firebaseUser != null) {
-        _currentUserModel = await _authService.getUserDetails(firebaseUser.uid);
+        final userModel = await _authService.getUserDetails(firebaseUser.uid);
+        if (userModel != null && userModel.status.toLowerCase() == 'inactive') {
+          await _authService.signOut();
+          _currentUserModel = null;
+          _errorMessage = 'Your account has been deactivated. Please contact the Principal.';
+        } else {
+          _currentUserModel = userModel;
+        }
       }
     } catch (e) {
       _errorMessage = e.toString();
@@ -38,7 +45,14 @@ class AuthProvider extends ChangeNotifier {
   Future<bool> login(String email, String password) async {
     _setLoading(true);
     try {
-      _currentUserModel = await _authService.loginWithEmailAndPassword(email, password);
+      final userModel = await _authService.loginWithEmailAndPassword(email, password);
+      if (userModel != null && userModel.status.toLowerCase() == 'inactive') {
+        await _authService.signOut();
+        _currentUserModel = null;
+        _setLoading(false, 'Your account has been deactivated. Please contact the Principal.');
+        return false;
+      }
+      _currentUserModel = userModel;
       _setLoading(false);
       return _currentUserModel != null;
     } catch (e, stacktrace) {
@@ -88,7 +102,14 @@ class AuthProvider extends ChangeNotifier {
     final firebaseUser = _authService.currentUser;
     if (firebaseUser != null) {
       try {
-        _currentUserModel = await _authService.getUserDetails(firebaseUser.uid);
+        final userModel = await _authService.getUserDetails(firebaseUser.uid);
+        if (userModel != null && userModel.status.toLowerCase() == 'inactive') {
+          await _authService.signOut();
+          _currentUserModel = null;
+          _errorMessage = 'Your account has been deactivated. Please contact the Principal.';
+        } else {
+          _currentUserModel = userModel;
+        }
         notifyListeners();
       } catch (e) {
         print('Error refreshing user: $e');

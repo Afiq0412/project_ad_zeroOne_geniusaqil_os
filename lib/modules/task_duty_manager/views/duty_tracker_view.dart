@@ -444,6 +444,10 @@ class _DutyTrackerViewState extends State<DutyTrackerView> {
                                         ),
                                         const SizedBox(width: 8),
                                         _buildStatusChip(log.status),
+                                        if (_shouldShowReminderButton(log.status, dutyType)) ...[
+                                          const SizedBox(width: 8),
+                                          _buildReminderButton(context, uid, dutyType, zone, schedule.id),
+                                        ],
                                       ],
                                     ),
                                   );
@@ -497,5 +501,105 @@ class _DutyTrackerViewState extends State<DutyTrackerView> {
         ),
       ),
     );
+  }
+
+  bool _shouldShowReminderButton(String status, String dutyType) {
+    if (status != 'Pending') return false;
+
+    final now = DateTime.now();
+    final currentHour = now.hour;
+    final currentMinute = now.minute;
+    final totalMinutes = currentHour * 60 + currentMinute;
+
+    switch (dutyType) {
+      case DutyConstants.arrival:
+        return totalMinutes >= 420; // 7:00 AM
+      case DutyConstants.assembly:
+        return now.weekday == DateTime.monday && totalMinutes >= 420; // 7:00 AM
+      case DutyConstants.dismissal:
+        return totalMinutes >= 690; // 11:30 AM
+      case DutyConstants.halfFullDay:
+        return totalMinutes >= 690; // 11:30 AM
+      case DutyConstants.cleaning:
+        return totalMinutes >= 960; // 4:00 PM
+      default:
+        return false;
+    }
+  }
+
+  Widget _buildReminderButton(BuildContext context, String teacherId, String dutyType, String zone, String scheduleId) {
+    final primary = Theme.of(context).colorScheme.primary;
+    return TextButton.icon(
+      onPressed: () => _sendReminder(context, teacherId, dutyType, zone, scheduleId),
+      icon: Icon(Icons.notifications_active_outlined, size: 12, color: primary),
+      label: Text(
+        'Remind',
+        style: GoogleFonts.inter(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: primary,
+        ),
+      ),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        backgroundColor: primary.withValues(alpha: 0.08),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(6),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _sendReminder(
+    BuildContext context,
+    String teacherId,
+    String dutyType,
+    String zone,
+    String scheduleId,
+  ) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final user = authProvider.currentUserModel;
+    final principalId = user?.id ?? '';
+
+    final provider = Provider.of<DutyProvider>(context, listen: false);
+    final success = await provider.sendDutyReminder(
+      teacherId: teacherId,
+      principalId: principalId,
+      dutyType: dutyType,
+      zone: zone,
+      scheduleId: scheduleId,
+    );
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(
+                success ? Icons.check_circle_outline : Icons.error_outline,
+                color: Colors.white,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  success
+                      ? 'Reminder notification sent successfully!'
+                      : 'Failed to send reminder. Please try again.',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w500),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: success ? Colors.green.shade700 : Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+    }
   }
 }

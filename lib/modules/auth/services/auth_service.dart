@@ -45,6 +45,8 @@ class AuthService {
           name: name,
           email: email,
           role: role,
+          status: 'Active',
+          phone: '',
           leaveBalances: {
             'Annual leave': 8.0,
             'Medical leave (MC)': 14.0,
