@@ -45,17 +45,28 @@ class PerformanceProvider extends ChangeNotifier {
 }
 
   void _listenToRecords() {
-    _db
-        .collection('evaluations')
-        .orderBy('evaluationDate', descending: true)
-        .snapshots()
-        .listen((snapshot) {
-      _records = snapshot.docs.map((doc) {
-        return _recordFromMap(doc.id, doc.data());
-      }).toList();
-      notifyListeners();
-    });
-  }
+  _db
+      .collection('evaluations')
+      .orderBy('evaluationDate', descending: true)
+      .snapshots()
+      .listen((snapshot) {
+    debugPrint('Evaluations snapshot: ${snapshot.docs.length} docs');
+    _records = snapshot.docs
+        .map((doc) {
+          try {
+            return _recordFromMap(doc.id, doc.data());
+          } catch (e) {
+            debugPrint('Error parsing record ${doc.id}: $e');
+            return null;
+          }
+        })
+        .whereType<TeacherPerformanceRecord>() // skip nulls
+        .toList();
+    notifyListeners();
+  }, onError: (e) {
+    debugPrint('Evaluations listener error: $e');
+  });
+}
 
   // ── Teacher management ───────────────────────────────────────────────────────
 
@@ -221,27 +232,27 @@ class PerformanceProvider extends ChangeNotifier {
   }
 
   Future<bool> submitReview() async {
-    if (_activeRecord == null || !_activeRecord!.isComplete) {
-      return false;
-    }
-    _isLoading = true;
-    notifyListeners();
-    try {
-      _activeRecord!.isSubmitted = true;
-      await _db
-          .collection('evaluations')
-          .add(_recordToMap(_activeRecord!));
-      _activeRecord = null;
-      return true;
-    } catch (e) {
-      debugPrint('Submit error: $e');
-      return false;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
+  if (_activeRecord == null || !_activeRecord!.isComplete) {
+    return false;
   }
-
+  _isLoading = true;
+  notifyListeners();
+  try {
+    _activeRecord!.isSubmitted = true;
+    final docRef = await _db
+        .collection('evaluations')
+        .add(_recordToMap(_activeRecord!));
+    debugPrint('Evaluation saved with id: ${docRef.id}');
+    _activeRecord = null;
+    return true;
+  } catch (e) {
+    debugPrint('Submit error: $e');
+    return false;
+  } finally {
+    _isLoading = false;
+    notifyListeners();
+  }
+}
   void clearActiveRecord() {
     _activeRecord = null;
     notifyListeners();
@@ -250,44 +261,60 @@ class PerformanceProvider extends ChangeNotifier {
   // ── Firestore converters ─────────────────────────────────────────────────────
 
   TeacherPerformanceRecord _recordFromMap(
-      String id, Map<String, dynamic> data) {
-    final categoriesData =
-        List<Map<String, dynamic>>.from(data['categories'] ?? []);
+    String id, Map<String, dynamic> data) {
+  final categoriesData =
+      List<Map<String, dynamic>>.from(data['categories'] ?? []);
 
-    final categories = categoriesData.map((catMap) {
-      // Get icon from local KpiData template by matching id
-      final template = KpiData.buildCategories().firstWhere(
-        (c) => c.id == catMap['id'],
-        orElse: () => KpiData.buildCategories().first,
-      );
-
-      final criteriaData =
-          List<Map<String, dynamic>>.from(catMap['criteria'] ?? []);
-
-      return KpiCategory(
-        id: catMap['id'],
-        title: catMap['title'],
-        icon: template.icon,
-        criteria:
-            criteriaData.map((c) => KpiCriterion.fromMap(c)).toList(),
-      );
-    }).toList();
-
-    return TeacherPerformanceRecord(
-      id: id,
-      teacherId: data['teacherId'] ?? '',
-      teacherName: data['teacherName'] ?? '',
-      reviewPeriod: data['reviewPeriod'] ?? '',
-      evaluationDate:
-          (data['evaluationDate'] as Timestamp).toDate(),
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      reviewerId: data['reviewerId'] ?? '',
-      reviewerName: data['reviewerName'] ?? '',
-      overallRemark: data['overallRemark'],
-      isSubmitted: data['isSubmitted'] ?? false,
-      categories: categories,
+  final categories = categoriesData.map((catMap) {
+    final template = KpiData.buildCategories().firstWhere(
+      (c) => c.id == catMap['id'],
+      orElse: () => KpiData.buildCategories().first,
     );
+
+    final criteriaData =
+        List<Map<String, dynamic>>.from(catMap['criteria'] ?? []);
+
+    return KpiCategory(
+      id: catMap['id'],
+      title: catMap['title'] ?? template.title,
+      icon: template.icon,
+      criteria:
+          criteriaData.map((c) => KpiCriterion.fromMap(c)).toList(),
+    );
+  }).toList();
+
+  // Safely parse evaluationDate
+  DateTime evaluationDate;
+  final rawEvalDate = data['evaluationDate'];
+  if (rawEvalDate is Timestamp) {
+    evaluationDate = rawEvalDate.toDate();
+  } else {
+    evaluationDate = DateTime.now(); // fallback
   }
+
+  // Safely parse createdAt — can be null if serverTimestamp not yet resolved
+  DateTime createdAt;
+  final rawCreatedAt = data['createdAt'];
+  if (rawCreatedAt is Timestamp) {
+    createdAt = rawCreatedAt.toDate();
+  } else {
+    createdAt = DateTime.now(); // fallback
+  }
+
+  return TeacherPerformanceRecord(
+    id: id,
+    teacherId: data['teacherId'] ?? '',
+    teacherName: data['teacherName'] ?? '',
+    reviewPeriod: data['reviewPeriod'] ?? '',
+    evaluationDate: evaluationDate,
+    createdAt: createdAt,
+    reviewerId: data['reviewerId'] ?? '',
+    reviewerName: data['reviewerName'] ?? '',
+    overallRemark: data['overallRemark'],
+    isSubmitted: data['isSubmitted'] ?? false,
+    categories: categories,
+  );
+}
 
   Map<String, dynamic> _recordToMap(TeacherPerformanceRecord record) {
     return {

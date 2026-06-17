@@ -52,7 +52,6 @@ class _TeacherRosterScreenState extends State<TeacherRosterScreen> {
                       SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Teachers are managed in Module 1. '
                           'All active teachers appear here automatically.',
                           style: TextStyle(
                               fontSize: 12, color: Colors.blue),
@@ -177,7 +176,7 @@ class _TeacherRosterScreenState extends State<TeacherRosterScreen> {
           'This will delete ALL evaluation records for '
           '${teacher.name}.\n\n'
           'The teacher account will NOT be affected. '
-          'To remove a teacher, use Module 1.',
+          '(Teacher personal data will remain)',
         ),
         actions: [
           TextButton(
