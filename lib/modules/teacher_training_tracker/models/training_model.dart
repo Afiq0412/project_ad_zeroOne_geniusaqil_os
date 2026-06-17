@@ -12,7 +12,7 @@ class TrainingModel {
   final String venue;
   final String reflection;
   final String? certificateUrl;
-  final List<String>? photoUrls; // 👈 Updated to support multiple photos
+  final List<String>? photoUrls;
   final DateTime createdAt;
 
   TrainingModel({
@@ -27,7 +27,7 @@ class TrainingModel {
     required this.venue,
     required this.reflection,
     this.certificateUrl,
-    this.photoUrls, // 👈 Updated
+    this.photoUrls,
     required this.createdAt,
   });
 
@@ -60,7 +60,7 @@ class TrainingModel {
       venue: json['venue'] ?? '',
       reflection: json['reflection'] ?? '',
       certificateUrl: certificateValue is String ? certificateValue : null,
-      photoUrls: parsedPhotos, // 👈 Updated
+      photoUrls: parsedPhotos,
       createdAt: (json['createdAt'] as Timestamp).toDate(),
     );
   }
@@ -77,7 +77,7 @@ class TrainingModel {
       'venue': venue,
       'reflection': reflection,
       'certificateUrl': certificateUrl,
-      'photoUrls': photoUrls, // 👈 Updated
+      'photoUrls': photoUrls,
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }

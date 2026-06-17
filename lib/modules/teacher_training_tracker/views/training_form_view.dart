@@ -10,7 +10,7 @@ import '../models/training_model.dart';
 
 class TrainingFormView extends StatefulWidget {
   final TrainingModel? logToEdit;
-  final bool isViewOnly; // 👈 Determines if Principal or Teacher
+  final bool isViewOnly;
 
   const TrainingFormView({super.key, this.logToEdit, this.isViewOnly = false});
 

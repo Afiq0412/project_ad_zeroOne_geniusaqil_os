@@ -137,7 +137,7 @@ class TrainingDashboardView extends StatelessWidget {
                         builder: (context) => TrainingFormView(
                           logToEdit: log,
                           isViewOnly:
-                              isPrincipal, // 👈 Principal flag applied here
+                              isPrincipal,
                         ),
                       ),
                     );
@@ -148,7 +148,7 @@ class TrainingDashboardView extends StatelessWidget {
           );
         },
       ),
-      // 👈 Hide the floating action button if it's the principal
+      // Hide the floating action button if it's the principal
       floatingActionButton: isPrincipal
           ? null
           : FloatingActionButton.extended(
