@@ -3,6 +3,8 @@ class UserModel {
   final String name;
   final String email;
   final String role;
+  final String status;
+  final String phone;
   final Map<String, double> leaveBalances;
 
   UserModel({
@@ -10,6 +12,8 @@ class UserModel {
     required this.name,
     required this.email,
     required this.role,
+    required this.status,
+    required this.phone,
     required this.leaveBalances,
   });
 
@@ -33,6 +37,8 @@ class UserModel {
       name: data['name'] ?? '',
       email: data['email'] ?? '',
       role: data['role'] ?? 'Teacher',
+      status: data['status'] ?? 'Active',
+      phone: data['phone'] ?? data['phoneNumber'] ?? '',
       leaveBalances: balances,
     );
   }
@@ -42,6 +48,8 @@ class UserModel {
       'name': name,
       'email': email,
       'role': role,
+      'status': status,
+      'phone': phone,
       'leaveBalances': leaveBalances,
     };
   }

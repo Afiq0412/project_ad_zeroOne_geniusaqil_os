@@ -14,7 +14,7 @@ class DutyScheduleModel {
   final String generatedBy; // UID of the principal who created it
   final String status;      // 'Draft' | 'Published'
 
-  /// Map<dayOrWeekLabel, Map<zone, List<teacherUids>>>
+  /// Map[dayOrWeekLabel, Map[zone, List[teacherUids]]]
   final Map<String, Map<String, List<String>>> assignments;
 
   DutyScheduleModel({

@@ -7,6 +7,7 @@ import '../../auth/views/login_view.dart';
 import '../../leave_management/views/leave_history_view.dart';
 import '../../leave_management/views/admin_leave_approval_view.dart';
 import '../../leave_management/views/notification_view.dart';
+import '../../manage_users/views/manage_users_view.dart';
 import '../../manage_teachers/views/manage_teachers_view.dart';
 import '../../manage_teachers/views/teacher_record_form_view.dart';
 import '../../task_duty_manager/views/duty_home_view.dart';
@@ -291,7 +292,7 @@ class HomeView extends StatelessWidget {
                     ),
                   ),
 
-                  // Manage Teachers card — visible to Principal only
+                  // Manage Teachers, Manage Users, and Performance Evaluation cards — visible to Principal only
                   if (user?.role.toLowerCase() == 'principal') ...[
                     const SizedBox(height: 12),
                     Card(
@@ -326,6 +327,44 @@ class HomeView extends StatelessWidget {
                             context,
                             MaterialPageRoute(
                               builder: (context) => const ManageTeachersView(),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.all(16),
+                        leading: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.indigo.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.people_outline,
+                            color: Colors.indigo,
+                          ),
+                        ),
+                        title: Text(
+                          'Manage Users',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          'View and manage all registered user accounts',
+                          style: GoogleFonts.inter(color: Colors.grey.shade600),
+                        ),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const ManageUsersView(),
                             ),
                           );
                         },
@@ -400,6 +439,7 @@ class HomeView extends StatelessWidget {
                       },
                     ),
                   ),
+
                   // Teacher Reporting — ALL roles can submit
                   const SizedBox(height: 12),
                   Card(

@@ -3,6 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../auth/models/user_model.dart';
+import '../../task_duty_manager/views/duty_checklist_view.dart';
+import '../../task_duty_manager/constants/duty_constants.dart';
 import '../models/notification_model.dart';
 import '../services/notification_service.dart';
 
@@ -80,7 +83,13 @@ class NotificationView extends StatelessWidget {
                 itemCount: notifications.length,
                 itemBuilder: (context, index) {
                   final notification = notifications[index];
-                  return _buildNotificationCard(context, notification, notificationService, dateFormat);
+                  return _buildNotificationCard(
+                    context,
+                    notification,
+                    notificationService,
+                    dateFormat,
+                    user,
+                  );
                 },
               );
             },
@@ -90,11 +99,21 @@ class NotificationView extends StatelessWidget {
     );
   }
 
+  String _reverseDisplayName(String name) {
+    for (var entry in DutyConstants.dutyDisplayNames.entries) {
+      if (entry.value == name) {
+        return entry.key;
+      }
+    }
+    return name;
+  }
+
   Widget _buildNotificationCard(
     BuildContext context,
     NotificationModel notification,
     NotificationService service,
     DateFormat dateFormat,
+    UserModel user,
   ) {
     Color iconBgColor;
     IconData iconData;
@@ -115,6 +134,10 @@ class NotificationView extends StatelessWidget {
       case 'reminder':
         iconBgColor = Colors.orange;
         iconData = Icons.alarm;
+        break;
+      case 'duty_reminder':
+        iconBgColor = Colors.orange.shade800;
+        iconData = Icons.notifications_active;
         break;
       default:
         iconBgColor = Colors.grey;
@@ -183,13 +206,80 @@ class NotificationView extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      dateFormat.format(notification.createdAt),
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        color: Colors.grey.shade500,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          dateFormat.format(notification.createdAt),
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                        if (notification.type == 'duty_reminder') ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            '•',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              color: Colors.grey.shade400,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Sent by Principal',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.orange.shade900,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
+                    if (notification.type == 'duty_reminder') ...[
+                      const SizedBox(height: 12),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            await service.markAsRead(notification.id);
+                            if (context.mounted) {
+                              final reversedType = _reverseDisplayName(notification.dutyType ?? '');
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => DutyChecklistView(
+                                    dutyType: reversedType,
+                                    zone: notification.zone ?? '',
+                                    date: notification.createdAt,
+                                    teacherId: user.id,
+                                    teacherName: user.name,
+                                    scheduleId: notification.scheduleId ?? '',
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Theme.of(context).colorScheme.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            elevation: 0,
+                          ),
+                          icon: const Icon(Icons.arrow_forward, size: 16),
+                          label: Text(
+                            'View Duty',
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
