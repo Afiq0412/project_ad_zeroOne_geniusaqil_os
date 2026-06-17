@@ -11,7 +11,7 @@ import 'modules/task_duty_manager/providers/duty_provider.dart';
 import 'modules/auth/views/login_view.dart';
 import 'modules/home/views/home_view.dart';
 import 'modules/teacher_training_tracker/providers/training_provider.dart';
-
+import 'modules/teacher_performance_record/providers/performance_provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -31,6 +31,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => ManageTeachersProvider()),
         ChangeNotifierProvider(create: (_) => DutyProvider()),
         ChangeNotifierProvider(create: (_) => TrainingProvider()),
+        ChangeNotifierProvider(create: (_) => PerformanceProvider()),
       ],
       child: const MyApp(),
     ),

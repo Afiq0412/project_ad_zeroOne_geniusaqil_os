@@ -11,6 +11,7 @@ import '../../manage_teachers/views/manage_teachers_view.dart';
 import '../../manage_teachers/views/teacher_record_form_view.dart';
 import '../../task_duty_manager/views/duty_home_view.dart';
 import '../../teacher_training_tracker/views/training_dashboard_view.dart';
+import '../../teacher_performance_record/screens/performance/teacher_roster_screen.dart';
 
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
@@ -115,7 +116,7 @@ class HomeView extends StatelessWidget {
                     radius: 50,
                     backgroundColor: Theme.of(
                       context,
-                    ).colorScheme.primary.withOpacity(0.1),
+                    ).colorScheme.primary.withValues(alpha: 0.1), // UBAH
                     child: Icon(
                       Icons.person,
                       size: 50,
@@ -141,7 +142,7 @@ class HomeView extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Theme.of(
                         context,
-                      ).colorScheme.primary.withOpacity(0.1),
+                      ).colorScheme.primary.withValues(alpha: 0.1), // UBAH
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -165,7 +166,8 @@ class HomeView extends StatelessWidget {
                       leading: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.deepPurple.withOpacity(0.1),
+                          color:
+                              Colors.deepPurple.withValues(alpha: 0.1), // UBAH
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -207,7 +209,7 @@ class HomeView extends StatelessWidget {
                       leading: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.1),
+                          color: Colors.green.withValues(alpha: 0.1), // UBAH
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -286,7 +288,7 @@ class HomeView extends StatelessWidget {
                       },
                     ),
                   ),
-                  
+
                   // Manage Teachers card — visible to Principal only
                   if (user?.role.toLowerCase() == 'principal') ...[
                     const SizedBox(height: 12),
@@ -300,7 +302,7 @@ class HomeView extends StatelessWidget {
                         leading: Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.indigo.withOpacity(0.1),
+                            color: Colors.indigo.withValues(alpha: 0.1), // UBAH
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
@@ -327,8 +329,40 @@ class HomeView extends StatelessWidget {
                         },
                       ),
                     ),
+                    
+                    const SizedBox(height: 12),
+                    Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.all(16),
+                        leading: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.purple.withValues(alpha: 0.1), // UBAH
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.assessment,
+                              color: Colors.purple),
+                        ),
+                        title: Text('Performance Evaluation',
+                            style:
+                                GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                        subtitle: Text('KPI review and teacher evaluation',
+                            style:
+                                GoogleFonts.inter(color: Colors.grey.shade600)),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: () {
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const TeacherRosterScreen()));
+                        },
+                      ),
+                    ),
                   ],
-                  
+
                   // Teacher Training Tracker card — visible to ALL roles
                   const SizedBox(height: 12),
                   Card(
@@ -341,7 +375,7 @@ class HomeView extends StatelessWidget {
                       leading: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.1),
+                          color: Colors.green.withValues(alpha: 0.1), // UBAH
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(Icons.school, color: Colors.green),
