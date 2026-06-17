@@ -32,13 +32,21 @@ class TrainingModel {
   });
 
   factory TrainingModel.fromJson(Map<String, dynamic> json, String documentId) {
-    // Gracefully handle old data where photoUrl was a single string
+    // Gracefully handle old data and link-only attachment field names.
     List<String>? parsedPhotos;
-    if (json['photoUrls'] != null) {
-      parsedPhotos = List<String>.from(json['photoUrls']);
-    } else if (json['photoUrl'] != null) {
+    final photoValue =
+        json['photoUrls'] ?? json['photoLinks'] ?? json['activityPhotoLinks'];
+    if (photoValue is List) {
+      parsedPhotos = photoValue.map((value) => value.toString()).toList();
+    } else if (photoValue is String && photoValue.trim().isNotEmpty) {
+      parsedPhotos = [photoValue];
+    } else if (json['photoUrl'] is String &&
+        (json['photoUrl'] as String).trim().isNotEmpty) {
       parsedPhotos = [json['photoUrl']];
     }
+
+    final certificateValue =
+        json['certificateUrl'] ?? json['certificateLink'] ?? json['fileLink'];
 
     return TrainingModel(
       id: documentId,
@@ -51,7 +59,7 @@ class TrainingModel {
       mode: json['mode'] ?? 'Physical',
       venue: json['venue'] ?? '',
       reflection: json['reflection'] ?? '',
-      certificateUrl: json['certificateUrl'],
+      certificateUrl: certificateValue is String ? certificateValue : null,
       photoUrls: parsedPhotos, // 👈 Updated
       createdAt: (json['createdAt'] as Timestamp).toDate(),
     );
