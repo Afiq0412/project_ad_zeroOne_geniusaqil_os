@@ -57,18 +57,6 @@ class _DutyPerformanceViewState extends State<DutyPerformanceView> {
     });
   }
 
-  int _daysInMonth(int year, int month) => DateTime(year, month + 1, 0).day;
-
-  int _daysPassed(int year, int month) {
-    final now = DateTime.now();
-    if (year < now.year || (year == now.year && month < now.month)) {
-      return _daysInMonth(year, month);
-    } else if (year == now.year && month == now.month) {
-      return now.day;
-    }
-    return 0;
-  }
-
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
@@ -87,19 +75,6 @@ class _DutyPerformanceViewState extends State<DutyPerformanceView> {
       ),
       body: Column(
         children: [
-          // ── Month Navigation Card ─────────────────────────────
-          _MonthHeaderCard(
-            selectedYear: _selectedYear,
-            selectedMonth: _selectedMonth,
-            monthNames: _monthNames,
-            isCurrentMonth: _isCurrentMonth,
-            daysPassed: _daysPassed(_selectedYear, _selectedMonth),
-            daysInMonth: _daysInMonth(_selectedYear, _selectedMonth),
-            primary: primary,
-            onPrevious: _previousMonth,
-            onNext: _nextMonth,
-          ),
-
           // ── FutureBuilder Body ────────────────────────────────
           Expanded(
             child: FutureBuilder<List<Map<String, dynamic>>>(
@@ -107,13 +82,30 @@ class _DutyPerformanceViewState extends State<DutyPerformanceView> {
               future: provider.getMonthlyPerformance(_selectedYear, _selectedMonth),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    children: const [
-                      SizedBox(height: 16),
-                      _ShimmerPlaceholder(),
-                      _ShimmerPlaceholder(),
-                      _ShimmerPlaceholder(),
+                  return Column(
+                    children: [
+                      // Placeholder header while loading
+                      _MonthHeaderCard(
+                        selectedYear: _selectedYear,
+                        selectedMonth: _selectedMonth,
+                        monthNames: _monthNames,
+                        isCurrentMonth: _isCurrentMonth,
+                        trackingStartDate: null,
+                        primary: primary,
+                        onPrevious: _previousMonth,
+                        onNext: _nextMonth,
+                      ),
+                      Expanded(
+                        child: ListView(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          children: const [
+                            SizedBox(height: 16),
+                            _ShimmerPlaceholder(),
+                            _ShimmerPlaceholder(),
+                            _ShimmerPlaceholder(),
+                          ],
+                        ),
+                      ),
                     ],
                   );
                 }
@@ -147,15 +139,43 @@ class _DutyPerformanceViewState extends State<DutyPerformanceView> {
                   );
                 }
 
-                final data = snapshot.data ?? [];
-                if (data.isEmpty || data.every((t) => (t['totalAssigned'] as int) == 0)) {
-                  return _EmptyState(
-                    monthName: _monthNames[_selectedMonth - 1],
-                    year: _selectedYear,
-                  );
+                final rawData = snapshot.data ?? [];
+
+                // Extract the metadata entry prepended by the provider
+                DateTime? trackingStartDate;
+                final List<Map<String, dynamic>> data = [];
+                for (final entry in rawData) {
+                  if (entry['meta'] == true) {
+                    trackingStartDate = entry['trackingStartDate'] as DateTime?;
+                  } else {
+                    data.add(entry);
+                  }
                 }
 
-                return _PerformanceBody(data: data, primary: primary);
+                return Column(
+                  children: [
+                    // ── Month Navigation Card ──────────────────────
+                    _MonthHeaderCard(
+                      selectedYear: _selectedYear,
+                      selectedMonth: _selectedMonth,
+                      monthNames: _monthNames,
+                      isCurrentMonth: _isCurrentMonth,
+                      trackingStartDate: trackingStartDate,
+                      primary: primary,
+                      onPrevious: _previousMonth,
+                      onNext: _nextMonth,
+                    ),
+                    Expanded(
+                      child: data.isEmpty ||
+                              data.every((t) => (t['totalAssigned'] as int) == 0)
+                          ? _EmptyState(
+                              monthName: _monthNames[_selectedMonth - 1],
+                              year: _selectedYear,
+                            )
+                          : _PerformanceBody(data: data, primary: primary),
+                    ),
+                  ],
+                );
               },
             ),
           ),
@@ -173,8 +193,8 @@ class _MonthHeaderCard extends StatelessWidget {
   final int selectedMonth;
   final List<String> monthNames;
   final bool isCurrentMonth;
-  final int daysPassed;
-  final int daysInMonth;
+  /// Null while loading.
+  final DateTime? trackingStartDate;
   final Color primary;
   final VoidCallback onPrevious;
   final VoidCallback onNext;
@@ -184,17 +204,22 @@ class _MonthHeaderCard extends StatelessWidget {
     required this.selectedMonth,
     required this.monthNames,
     required this.isCurrentMonth,
-    required this.daysPassed,
-    required this.daysInMonth,
+    required this.trackingStartDate,
     required this.primary,
     required this.onPrevious,
     required this.onNext,
   });
 
+  String _formatDate(DateTime dt) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final progress = daysInMonth > 0 ? daysPassed / daysInMonth : 0.0;
-
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Card(
@@ -235,42 +260,60 @@ class _MonthHeaderCard extends StatelessWidget {
                 ],
               ),
 
-              if (isCurrentMonth) ...[
-                const SizedBox(height: 14),
+              const SizedBox(height: 12),
+
+              if (trackingStartDate != null) ...[
+                // ── Tracking since badge ────────────────────────────
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: primary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(color: primary.withOpacity(0.18)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.flag_rounded, size: 14, color: primary),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Tracking since ${_formatDate(trackingStartDate!)}',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (!isCurrentMonth) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.check_circle_rounded, size: 14, color: Colors.green.shade600),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Month completed — final results',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.green.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ] else ...[
+                // Loading state
                 Text(
-                  'Month in progress • $daysPassed of $daysInMonth days',
+                  isCurrentMonth ? 'Month in progress' : 'Month completed — final results',
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Colors.grey.shade500,
+                    color: Colors.grey.shade400,
                     fontWeight: FontWeight.w500,
                   ),
-                ),
-                const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    minHeight: 7,
-                    backgroundColor: Colors.grey.shade100,
-                    valueColor: AlwaysStoppedAnimation<Color>(primary),
-                  ),
-                ),
-              ] else ...[
-                const SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.check_circle_rounded, size: 14, color: Colors.green.shade600),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Month completed — final results',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.green.shade700,
-                      ),
-                    ),
-                  ],
                 ),
               ],
             ],
@@ -348,16 +391,17 @@ class _PerformanceBodyState extends State<_PerformanceBody> {
       sortedData.sort((a, b) => (b['missed'] as int).compareTo(a['missed'] as int));
     }
 
-    final int totalAssigned = widget.data.fold(0, (sum, t) => sum + (t['totalAssigned'] as int));
-    final int totalCompleted = widget.data.fold(0, (sum, t) => sum + (t['completed'] as int));
-    final int totalMissed = widget.data.fold(0, (sum, t) => sum + (t['missed'] as int));
-    final int totalUpcoming = widget.data.fold(0, (sum, t) => sum + (t['upcoming'] as int));
+    final int totalAssigned   = widget.data.fold(0, (sum, t) => sum + (t['totalAssigned'] as int));
+    final int totalCompleted  = widget.data.fold(0, (sum, t) => sum + (t['completed'] as int));
+    final int totalMissed     = widget.data.fold(0, (sum, t) => sum + (t['missed'] as int));
+    final int totalPending    = widget.data.fold(0, (sum, t) => sum + ((t['pendingToday'] as int?) ?? 0));
+    final int totalUpcoming   = widget.data.fold(0, (sum, t) => sum + (t['upcoming'] as int));
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
       children: [
-        // ── Stats 2x2 Grid ────────────────────────────────────
-        _buildStatsGrid(totalAssigned, totalCompleted, totalMissed, totalUpcoming),
+        // ── Stats Grid ────────────────────────────────────────
+        _buildStatsGrid(totalAssigned, totalCompleted, totalMissed, totalPending, totalUpcoming),
 
         const SizedBox(height: 12),
 
@@ -386,7 +430,7 @@ class _PerformanceBodyState extends State<_PerformanceBody> {
     );
   }
 
-  Widget _buildStatsGrid(int assigned, int completed, int missed, int upcoming) {
+  Widget _buildStatsGrid(int assigned, int completed, int missed, int pendingToday, int upcoming) {
     return Column(
       children: [
         Row(
@@ -430,15 +474,25 @@ class _PerformanceBodyState extends State<_PerformanceBody> {
             const SizedBox(width: 10),
             Expanded(
               child: _StatGridCard(
-                title: 'Upcoming',
-                value: '$upcoming',
-                icon: Icons.watch_later_outlined,
-                iconColor: const Color(0xFF616161),
-                bgColor: const Color(0xFFF5F5F5),
-                borderColor: const Color(0xFFE0E0E0),
+                title: 'Pending Today',
+                value: '$pendingToday',
+                icon: Icons.hourglass_top_rounded,
+                iconColor: const Color(0xFFE65100),
+                bgColor: const Color(0xFFFFF3E0),
+                borderColor: const Color(0xFFFFCC80),
               ),
             ),
           ],
+        ),
+        const SizedBox(height: 10),
+        // Upcoming — full width row
+        _StatGridCard(
+          title: 'Upcoming',
+          value: '$upcoming',
+          icon: Icons.watch_later_outlined,
+          iconColor: const Color(0xFF616161),
+          bgColor: const Color(0xFFF5F5F5),
+          borderColor: const Color(0xFFE0E0E0),
         ),
       ],
     );
@@ -847,9 +901,10 @@ class _TeacherPerformanceCard extends StatelessWidget {
     final grade = teacher['grade'] as String;
     final gradeColor = Color(teacher['gradeColor'] as int);
     final rate = (teacher['completionRate'] as double).clamp(0.0, 100.0);
-    final completed = teacher['completed'] as int;
-    final missed = teacher['missed'] as int;
-    final upcoming = teacher['upcoming'] as int;
+    final completed     = teacher['completed'] as int;
+    final missed        = teacher['missed'] as int;
+    final pendingToday  = (teacher['pendingToday'] as int?) ?? 0;
+    final upcoming      = teacher['upcoming'] as int;
     final totalAssigned = teacher['totalAssigned'] as int;
     final dutyBreakdown = (teacher['dutyBreakdown'] as Map<String, dynamic>?) ?? {};
 
@@ -950,6 +1005,8 @@ class _TeacherPerformanceCard extends StatelessWidget {
                               children: [
                                 _MiniStatChip(icon: '📋', label: '$totalAssigned assigned', color: Colors.blueGrey),
                                 _MiniStatChip(icon: '❌', label: '$missed missed', color: Colors.red.shade700),
+                                if (pendingToday > 0)
+                                  _MiniStatChip(icon: '🟡', label: '$pendingToday pending today', color: const Color(0xFFE65100)),
                                 _MiniStatChip(icon: '⏳', label: '$upcoming upcoming', color: Colors.grey.shade600),
                               ],
                             ),
@@ -970,11 +1027,15 @@ class _TeacherPerformanceCard extends StatelessWidget {
                             const Divider(height: 1, color: Color(0xFFEEEEEE)),
                             const SizedBox(height: 12),
                             // Mini stat pills row
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            Wrap(
+                              alignment: WrapAlignment.spaceEvenly,
+                              spacing: 6,
+                              runSpacing: 6,
                               children: [
                                 _StatPill('✅', '$completed', Colors.green.shade50, Colors.green.shade800),
                                 _StatPill('❌', '$missed', Colors.red.shade50, Colors.red.shade800),
+                                if (pendingToday > 0)
+                                  _StatPill('🟡', '$pendingToday today', const Color(0xFFFFF3E0), const Color(0xFFE65100)),
                                 _StatPill('⏳', '$upcoming', Colors.grey.shade100, Colors.grey.shade700),
                               ],
                             ),

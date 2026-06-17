@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
@@ -792,20 +793,54 @@ class DutyProvider extends ChangeNotifier {
 
   // ── Monthly Performance ───────────────────────────────────────
 
+  // ── Fixed Tracking Start Date ─────────────────────────────────
+  //
+  // The tracking start date is stored permanently in Firestore under
+  // app_config/duty_tracking { trackingStartDate: Timestamp }.
+  // The very first call creates this document (set to today), making
+  // that date the permanent anchor.  Every subsequent call reads the
+  // same value — the data never shifts regardless of when the report
+  // is opened.
+
+  /// Reads the permanent tracking start date from Firestore.
+  /// Creates the config document with today's date if it does not yet exist.
+  Future<DateTime> _getOrCreateTrackingStartDate() async {
+    final ref = FirebaseFirestore.instance
+        .collection('app_config')
+        .doc('duty_tracking');
+    final snap = await ref.get();
+    if (snap.exists && snap.data()!.containsKey('trackingStartDate')) {
+      final ts = snap.data()!['trackingStartDate'];
+      if (ts is Timestamp) {
+        final dt = ts.toDate();
+        return DateTime(dt.year, dt.month, dt.day);
+      }
+    }
+    // Document missing or field missing — bootstrap with today's date.
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    await ref.set(
+      {'trackingStartDate': Timestamp.fromDate(today)},
+      SetOptions(merge: true),
+    );
+    return today;
+  }
+
   List<DateTime> _getWeekStartsInMonth(int year, int month) {
     final List<DateTime> weekStarts = [];
     final firstDay = DateTime(year, month, 1);
     final lastDay = DateTime(year, month + 1, 0);
-    
+
     // Find first Monday of or before the month
     DateTime current = firstDay;
     while (current.weekday != DateTime.monday) {
       current = current.subtract(const Duration(days: 1));
     }
-    
+
     // Collect all Mondays that overlap with the month
     while (current.isBefore(lastDay) || current.isAtSameMomentAs(lastDay)) {
-      if (current.month == month || current.add(const Duration(days: 4)).month == month) {
+      if (current.month == month ||
+          current.add(const Duration(days: 4)).month == month) {
         weekStarts.add(current);
       }
       current = current.add(const Duration(days: 7));
@@ -813,39 +848,41 @@ class DutyProvider extends ChangeNotifier {
     return weekStarts;
   }
 
-  /// Returns only the relevant week starts for performance analysis:
-  /// - For the current month: only current week and future weeks within the month
-  ///   (avoids counting "missed" duties from weeks before the app was in active use)
-  /// - For past months: all weeks (full historical data)
-  List<DateTime> _getRelevantWeekStarts(int year, int month) {
-    final now = DateTime.now();
-    final allWeeks = _getWeekStartsInMonth(year, month);
-
-    final isCurrentMonth = year == now.year && month == now.month;
-    if (!isCurrentMonth) return allWeeks;
-
-    // Current month — only count from current week start onwards
-    final currentWeekStart = DutyScheduleModel.weekStartFor(now);
-    return allWeeks.where((w) => !w.isBefore(currentWeekStart)).toList();
-  }
-
   /// Fetches monthly performance data for all active teachers.
-  /// Returns a list sorted by completion rate descending.
+  ///
+  /// Uses a **fixed** tracking start date fetched from Firestore so the
+  /// historical view never shifts between logins or days.
+  ///
+  /// Duty dates before [trackingStartDate] are completely ignored.
+  /// Today's incomplete duties are counted as **Pending Today** (amber),
+  /// not as Missed or Upcoming.
+  ///
+  /// The returned list contains an extra top-level entry at index 0 that
+  /// is a metadata map: { 'meta': true, 'trackingStartDate': DateTime }.
+  /// The view layer reads this before rendering teacher cards.
   Future<List<Map<String, dynamic>>> getMonthlyPerformance(
       int year, int month) async {
     try {
-      final allTeachers = await _rotationService.getActiveTeachers();
-      final weekStarts = _getRelevantWeekStarts(year, month);
+      // ── Step 1: Resolve permanent tracking start date ──────────
+      final trackingStartDate = await _getOrCreateTrackingStartDate();
 
-      // Fetch all published schedules for weeks overlapping the month
+      final allTeachers = await _rotationService.getActiveTeachers();
+      final weekStarts = _getWeekStartsInMonth(year, month);
+
+      // ── Step 2: Fetch all published schedules for this month ────
       final List<DutyScheduleModel> publishedSchedules = [];
       for (final weekStart in weekStarts) {
-        final weeklySchedules = await _scheduleService.getPublishedSchedulesForWeekOnce(weekStart);
+        final weeklySchedules =
+            await _scheduleService.getPublishedSchedulesForWeekOnce(weekStart);
         publishedSchedules.addAll(weeklySchedules);
       }
 
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+
       final List<Map<String, dynamic>> performance = [];
 
+      // ── Step 3: Per-teacher performance calculation ─────────────
       for (final teacher in allTeachers) {
         final logs = await _checklistService.getLogsForTeacherAndMonth(
           teacherId: teacher.id,
@@ -856,21 +893,18 @@ class DutyProvider extends ChangeNotifier {
         int completedCount = 0;
         int inProgressCount = 0;
         int missedCount = 0;
-        int upcomingCount = 0;
-        int totalAssigned = 0;
+        int pendingTodayCount = 0; // today's not-yet-done duties
+        int upcomingCount = 0;     // future duties
+        int totalAssigned = 0;     // only duties on/after trackingStartDate
 
         final Map<String, Map<String, int>> dutyBreakdown = {
-          'Cleaning': {'assigned': 0, 'completed': 0},
-          'Arrival': {'assigned': 0, 'completed': 0},
-          'Dismissal': {'assigned': 0, 'completed': 0},
+          'Cleaning':    {'assigned': 0, 'completed': 0},
+          'Arrival':     {'assigned': 0, 'completed': 0},
+          'Dismissal':   {'assigned': 0, 'completed': 0},
           'HalfFullDay': {'assigned': 0, 'completed': 0},
-          'Assembly': {'assigned': 0, 'completed': 0},
+          'Assembly':    {'assigned': 0, 'completed': 0},
         };
 
-        final now = DateTime.now();
-        final today = DateTime(now.year, now.month, now.day);
-
-        // Scan all assignments across all published schedules this month
         for (final schedule in publishedSchedules) {
           final dutyType = schedule.dutyType;
 
@@ -879,82 +913,102 @@ class DutyProvider extends ChangeNotifier {
             final dayOffset = _dayOffset(dayName);
             final dutyDate = schedule.weekStart.add(Duration(days: dayOffset));
 
-            // Only count if this specific day falls within the target month
-            if (dutyDate.year == year && dutyDate.month == month) {
-              for (final zone in dayAssignments.keys) {
-                // Skip Assembly Sub Theme Key
-                if (dutyType == DutyConstants.assembly && zone == DutyConstants.assemblySubThemeKey) {
-                  continue;
+            // Only count duties falling within the target month
+            if (dutyDate.year != year || dutyDate.month != month) continue;
+
+            final dutyDateOnly =
+                DateTime(dutyDate.year, dutyDate.month, dutyDate.day);
+
+            // ── Fixed tracking gate ─────────────────────────────────
+            // Any duty before the tracking start date is completely
+            // excluded — as if the feature didn't exist yet.
+            if (dutyDateOnly.isBefore(trackingStartDate)) continue;
+
+            for (final zone in dayAssignments.keys) {
+              // Skip Assembly Sub Theme text zone
+              if (dutyType == DutyConstants.assembly &&
+                  zone == DutyConstants.assemblySubThemeKey) continue;
+
+              final assignedTeachers = dayAssignments[zone] ?? [];
+              if (!assignedTeachers.contains(teacher.id)) continue;
+
+              totalAssigned++;
+
+              // Find the matching checklist log for this duty
+              ChecklistLogModel? matchingLog;
+              for (final log in logs) {
+                if (log.dutyType == dutyType &&
+                    log.zone == zone &&
+                    log.assignedDate.year == dutyDate.year &&
+                    log.assignedDate.month == dutyDate.month &&
+                    log.assignedDate.day == dutyDate.day) {
+                  matchingLog = log;
+                  break;
                 }
+              }
 
-                final assignedTeachers = dayAssignments[zone] ?? [];
-                if (assignedTeachers.contains(teacher.id)) {
-                  totalAssigned++;
+              bool isCompleted = false;
+              final isToday = dutyDateOnly.isAtSameMomentAs(today);
+              final isPast  = dutyDateOnly.isBefore(today);
 
-                  // Find matching checklist log
-                  ChecklistLogModel? matchingLog;
-                  for (final log in logs) {
-                    if (log.dutyType == dutyType &&
-                        log.zone == zone &&
-                        log.assignedDate.year == dutyDate.year &&
-                        log.assignedDate.month == dutyDate.month &&
-                        log.assignedDate.day == dutyDate.day) {
-                      matchingLog = log;
-                      break;
-                    }
-                  }
+              if (matchingLog != null &&
+                  matchingLog.status == 'Completed') {
+                // ✅ Completed — locked in permanently
+                completedCount++;
+                isCompleted = true;
+              } else if (matchingLog != null &&
+                  (matchingLog.status == 'InProgress' ||
+                   matchingLog.status == 'in_progress')) {
+                if (isToday) {
+                  // Still in progress today → Pending Today
+                  pendingTodayCount++;
+                } else if (isPast) {
+                  // Was in-progress but the day passed → Missed
+                  missedCount++;
+                } else {
+                  inProgressCount++;
+                }
+              } else {
+                // Pending / no log
+                if (isToday) {
+                  // Today's day hasn't ended yet → Pending Today (amber)
+                  pendingTodayCount++;
+                } else if (isPast) {
+                  // Day has fully passed without completion → Missed (red)
+                  missedCount++;
+                } else {
+                  // Future date → Upcoming (grey)
+                  upcomingCount++;
+                }
+              }
 
-                  bool isCompleted = false;
-                  final dutyDateOnly = DateTime(dutyDate.year, dutyDate.month, dutyDate.day);
-                  final isPast = dutyDateOnly.isBefore(today);
-
-                  if (matchingLog != null) {
-                    if (matchingLog.status == 'Completed') {
-                      completedCount++;
-                      isCompleted = true;
-                    } else if (matchingLog.status == 'InProgress' || matchingLog.status == 'in_progress') {
-                      inProgressCount++;
-                    } else {
-                      // Status is Pending or other
-                      if (isPast) {
-                        missedCount++;
-                      } else {
-                        upcomingCount++;
-                      }
-                    }
-                  } else {
-                    // No checklist log
-                    if (isPast) {
-                      missedCount++;
-                    } else {
-                      upcomingCount++;
-                    }
-                  }
-
-                  // Increment duty breakdown counts
-                  if (dutyBreakdown.containsKey(dutyType)) {
-                    dutyBreakdown[dutyType]!['assigned'] = dutyBreakdown[dutyType]!['assigned']! + 1;
-                    if (isCompleted) {
-                      dutyBreakdown[dutyType]!['completed'] = dutyBreakdown[dutyType]!['completed']! + 1;
-                    }
-                  }
+              // Duty-type breakdown
+              if (dutyBreakdown.containsKey(dutyType)) {
+                dutyBreakdown[dutyType]!['assigned'] =
+                    dutyBreakdown[dutyType]!['assigned']! + 1;
+                if (isCompleted) {
+                  dutyBreakdown[dutyType]!['completed'] =
+                      dutyBreakdown[dutyType]!['completed']! + 1;
                 }
               }
             }
           }
         }
 
-        final divisor = totalAssigned - upcomingCount;
-        final completionRate = divisor <= 0 ? 0.0 : (completedCount / divisor * 100);
+        // Completion rate excludes upcoming — completed, missed, and pendingToday are "due so far"
+        final dueSoFar = completedCount + missedCount + pendingTodayCount;
+        final completionRate =
+            dueSoFar == 0 ? 0.0 : (completedCount / dueSoFar * 100);
 
         performance.add({
-          'teacherId': teacher.id,
-          'teacherName': teacher.name,
+          'teacherId':    teacher.id,
+          'teacherName':  teacher.name,
           'totalAssigned': totalAssigned,
-          'completed': completedCount,
-          'inProgress': inProgressCount,
-          'missed': missedCount,
-          'upcoming': upcomingCount,
+          'completed':    completedCount,
+          'inProgress':   inProgressCount,
+          'missed':       missedCount,
+          'pendingToday': pendingTodayCount,
+          'upcoming':     upcomingCount,
           'completionRate': completionRate,
           'grade': completionRate >= 90
               ? 'Excellent'
@@ -974,9 +1028,16 @@ class DutyProvider extends ChangeNotifier {
         });
       }
 
-      // Default sorting: completion rate descending
+      // Default sort: completion rate descending
       performance.sort((a, b) => (b['completionRate'] as double)
           .compareTo(a['completionRate'] as double));
+
+      // Prepend metadata entry so the view layer knows the tracking start date
+      // without needing a second async call.
+      performance.insert(0, {
+        'meta': true,
+        'trackingStartDate': trackingStartDate,
+      });
 
       return performance;
     } catch (e) {

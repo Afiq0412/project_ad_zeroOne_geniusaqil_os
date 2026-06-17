@@ -253,21 +253,24 @@ class ChecklistService {
     required int month,
   }) async {
     try {
+      final snapshot = await _db
+          .collection(_col)
+          .where('teacherId', isEqualTo: teacherId)
+          .get();
+
+      final allLogs = snapshot.docs
+          .map((doc) => ChecklistLogModel.fromMap(doc.data(), doc.id))
+          .toList();
+
       final startDate = DateTime(year, month, 1);
       // month + 1 handles December → January of next year automatically
       final endDate = DateTime(year, month + 1, 1);
 
-      final snapshot = await _db
-          .collection(_col)
-          .where('teacherId', isEqualTo: teacherId)
-          .where('assignedDate',
-              isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
-          .where('assignedDate', isLessThan: Timestamp.fromDate(endDate))
-          .get();
-
-      return snapshot.docs
-          .map((doc) => ChecklistLogModel.fromMap(doc.data(), doc.id))
-          .toList();
+      return allLogs.where((log) {
+        return (log.assignedDate.isAfter(startDate) ||
+                log.assignedDate.isAtSameMomentAs(startDate)) &&
+            log.assignedDate.isBefore(endDate);
+      }).toList();
     } catch (e) {
       debugPrint('Get logs for month error: $e');
       return [];
