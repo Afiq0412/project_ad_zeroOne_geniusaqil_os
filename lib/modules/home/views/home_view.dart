@@ -12,6 +12,8 @@ import '../../manage_teachers/views/teacher_record_form_view.dart';
 import '../../task_duty_manager/views/duty_home_view.dart';
 import '../../teacher_training_tracker/views/training_dashboard_view.dart';
 import '../../teacher_performance_record/screens/performance/teacher_roster_screen.dart';
+import '../../teacher_reporting/views/report_dashboard_view.dart';
+import '../../teacher_reporting/views/admin_report_view.dart';
 
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
@@ -329,7 +331,6 @@ class HomeView extends StatelessWidget {
                         },
                       ),
                     ),
-                    
                     const SizedBox(height: 12),
                     Card(
                       elevation: 2,
@@ -394,6 +395,49 @@ class HomeView extends StatelessWidget {
                           context,
                           MaterialPageRoute(
                             builder: (context) => const TrainingDashboardView(),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  // Teacher Reporting — ALL roles can submit
+                  const SizedBox(height: 12),
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.all(16),
+                      leading: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.report_outlined,
+                            color: Colors.red),
+                      ),
+                      title: Text(
+                        user?.role.toLowerCase() == 'principal'
+                            ? 'Teacher Reports'
+                            : 'Reporting System',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        user?.role.toLowerCase() == 'principal'
+                            ? 'View and manage all submitted reports'
+                            : 'Submit and track your reports',
+                        style: GoogleFonts.inter(color: Colors.grey.shade600),
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                user?.role.toLowerCase() == 'principal'
+                                    ? const AdminReportsView()
+                                    : const ReportDashboardView(),
                           ),
                         );
                       },
