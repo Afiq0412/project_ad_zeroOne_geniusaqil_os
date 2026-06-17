@@ -8,8 +8,13 @@ import '../../leave_management/views/leave_history_view.dart';
 import '../../leave_management/views/admin_leave_approval_view.dart';
 import '../../leave_management/views/notification_view.dart';
 import '../../manage_users/views/manage_users_view.dart';
+import '../../manage_teachers/views/manage_teachers_view.dart';
+import '../../manage_teachers/views/teacher_record_form_view.dart';
 import '../../task_duty_manager/views/duty_home_view.dart';
 import '../../teacher_training_tracker/views/training_dashboard_view.dart';
+import '../../teacher_performance_record/screens/performance/teacher_roster_screen.dart';
+import '../../teacher_reporting/views/report_dashboard_view.dart';
+import '../../teacher_reporting/views/admin_report_view.dart';
 
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
@@ -103,144 +108,302 @@ class HomeView extends StatelessWidget {
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 600),
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircleAvatar(
-                  radius: 50,
-                  backgroundColor: Theme.of(
-                    context,
-                  ).colorScheme.primary.withOpacity(0.1),
-                  child: Icon(
-                    Icons.person,
-                    size: 50,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'Welcome, ${user?.name ?? "User"}!',
-                  style: GoogleFonts.outfit(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF1F2937),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(
+          // 👇 The SingleChildScrollView that fixes the overflow error
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircleAvatar(
+                    radius: 50,
+                    backgroundColor: Theme.of(
                       context,
-                    ).colorScheme.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    user?.role.toUpperCase() ?? "ROLE",
-                    style: GoogleFonts.inter(
-                      fontWeight: FontWeight.bold,
+                    ).colorScheme.primary.withValues(alpha: 0.1), // UBAH
+                    child: Icon(
+                      Icons.person,
+                      size: 50,
                       color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
-                ),
-                const SizedBox(height: 40),
-                // Placeholder for the Leave Management module
-                Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Welcome, ${user?.name ?? "User"}!',
+                    style: GoogleFonts.outfit(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF1F2937),
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(16),
-                    leading: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.event_available,
-                        color: Colors.green,
-                      ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
                     ),
-                    title: Text(
-                      'Leave Management',
-                      style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text(
-                      'Apply for leave and track your balance',
-                      style: GoogleFonts.inter(color: Colors.grey.shade600),
-                    ),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () {
-                      if (user?.role.toLowerCase() == 'principal') {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                const AdminLeaveApprovalView(),
-                          ),
-                        );
-                      } else {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const LeaveHistoryView(),
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                ),
-                // Task & Duty Manager card — visible to ALL roles
-                const SizedBox(height: 12),
-                Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(16),
-                    leading: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.teal.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.assignment_turned_in_outlined,
-                        color: Colors.teal,
-                      ),
-                    ),
-                    title: Text(
-                      'Task & Duty Manager',
-                      style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text(
-                      user?.role.toLowerCase() == 'principal'
-                          ? 'Manage duty rosters and track completion'
-                          : 'View your assigned duties and checklists',
-                      style: GoogleFonts.inter(color: Colors.grey.shade600),
-                    ),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () {
-                      Navigator.push(
+                    decoration: BoxDecoration(
+                      color: Theme.of(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) => const DutyHomeView(),
-                        ),
-                      );
-                    },
+                      ).colorScheme.primary.withValues(alpha: 0.1), // UBAH
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      user?.role.toUpperCase() ?? "ROLE",
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
                   ),
-                ),
-                // Manage Users card — visible to Principal only
-                if (user?.role.toLowerCase() == 'principal') ...[
+                  const SizedBox(height: 40),
+
+                  // My Profile card — all roles can view/edit their own record
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.all(16),
+                      leading: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color:
+                              Colors.deepPurple.withValues(alpha: 0.1), // UBAH
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.account_circle_outlined,
+                          color: Colors.deepPurple,
+                        ),
+                      ),
+                      title: Text(
+                        'My Profile',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        'View and update your personal record and documents',
+                        style: GoogleFonts.inter(color: Colors.grey.shade600),
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                      onTap: () {
+                        if (user == null) return;
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                TeacherRecordFormView(teacherId: user.id),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Leave Management module
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.all(16),
+                      leading: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withValues(alpha: 0.1), // UBAH
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.event_available,
+                          color: Colors.green,
+                        ),
+                      ),
+                      title: Text(
+                        'Leave Management',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        'Apply for leave and track your balance',
+                        style: GoogleFonts.inter(color: Colors.grey.shade600),
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                      onTap: () {
+                        if (user?.role.toLowerCase() == 'principal') {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const AdminLeaveApprovalView(),
+                            ),
+                          );
+                        } else {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const LeaveHistoryView(),
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Task & Duty Manager card — visible to ALL roles
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.all(16),
+                      leading: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.teal.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.assignment_turned_in_outlined,
+                          color: Colors.teal,
+                        ),
+                      ),
+                      title: Text(
+                        'Task & Duty Manager',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        user?.role.toLowerCase() == 'principal'
+                            ? 'Manage duty rosters and track completion'
+                            : 'View your assigned duties and checklists',
+                        style: GoogleFonts.inter(color: Colors.grey.shade600),
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const DutyHomeView(),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                  // Manage Teachers, Manage Users, and Performance Evaluation cards — visible to Principal only
+                  if (user?.role.toLowerCase() == 'principal') ...[
+                    const SizedBox(height: 12),
+                    Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.all(16),
+                        leading: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.indigo.withValues(alpha: 0.1), // UBAH
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.manage_accounts,
+                            color: Colors.indigo,
+                          ),
+                        ),
+                        title: Text(
+                          'Manage Teachers',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          'View and manage all registered teachers',
+                          style: GoogleFonts.inter(color: Colors.grey.shade600),
+                        ),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const ManageTeachersView(),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.all(16),
+                        leading: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.indigo.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.people_outline,
+                            color: Colors.indigo,
+                          ),
+                        ),
+                        title: Text(
+                          'Manage Users',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          'View and manage all registered user accounts',
+                          style: GoogleFonts.inter(color: Colors.grey.shade600),
+                        ),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const ManageUsersView(),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.all(16),
+                        leading: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.purple.withValues(alpha: 0.1), // UBAH
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.assessment,
+                              color: Colors.purple),
+                        ),
+                        title: Text('Performance Evaluation',
+                            style:
+                                GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                        subtitle: Text('KPI review and teacher evaluation',
+                            style:
+                                GoogleFonts.inter(color: Colors.grey.shade600)),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: () {
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const TeacherRosterScreen()));
+                        },
+                      ),
+                    ),
+                  ],
+
+                  // Teacher Training Tracker card — visible to ALL roles
                   const SizedBox(height: 12),
                   Card(
                     elevation: 2,
@@ -252,20 +415,17 @@ class HomeView extends StatelessWidget {
                       leading: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.indigo.withValues(alpha: 0.1),
+                          color: Colors.green.withValues(alpha: 0.1), // UBAH
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
-                          Icons.manage_accounts,
-                          color: Colors.indigo,
-                        ),
+                        child: const Icon(Icons.school, color: Colors.green),
                       ),
                       title: Text(
-                        'Manage Users',
+                        'Teacher Training Tracker',
                         style: GoogleFonts.inter(fontWeight: FontWeight.bold),
                       ),
                       subtitle: Text(
-                        'View and manage all registered user accounts',
+                        'View and manage teacher training activities',
                         style: GoogleFonts.inter(color: Colors.grey.shade600),
                       ),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
@@ -273,50 +433,58 @@ class HomeView extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const ManageUsersView(),
+                            builder: (context) => const TrainingDashboardView(),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                  // Teacher Reporting — ALL roles can submit
+                  const SizedBox(height: 12),
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.all(16),
+                      leading: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.report_outlined,
+                            color: Colors.red),
+                      ),
+                      title: Text(
+                        user?.role.toLowerCase() == 'principal'
+                            ? 'Teacher Reports'
+                            : 'Reporting System',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        user?.role.toLowerCase() == 'principal'
+                            ? 'View and manage all submitted reports'
+                            : 'Submit and track your reports',
+                        style: GoogleFonts.inter(color: Colors.grey.shade600),
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                user?.role.toLowerCase() == 'principal'
+                                    ? const AdminReportsView()
+                                    : const ReportDashboardView(),
                           ),
                         );
                       },
                     ),
                   ),
                 ],
-                // Teacher Training Tracker card — visible to ALL roles
-                const SizedBox(height: 12),
-                Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(16),
-                    leading: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.school, color: Colors.green),
-                    ),
-                    title: Text(
-                      'Teacher Training Tracker',
-                      style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text(
-                      'View and manage teacher training activities',
-                      style: GoogleFonts.inter(color: Colors.grey.shade600),
-                    ),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const TrainingDashboardView(),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),

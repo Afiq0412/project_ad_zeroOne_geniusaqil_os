@@ -1,1 +1,23 @@
-{"flutter":{"platforms":{"dart":{"lib/firebase_options.dart":{"projectId":"project-ad-2026-4b28d","configurations":{"android":"1:580329183256:android:0fb210dd7b78e1d0fb0b6d","web":"1:580329183256:web:ac42ba635cf4bf09fb0b6d","windows":"1:580329183256:web:be44be44bb43befcfb0b6d"}}},"android":{"default":{"projectId":"project-ad-2026-4b28d","appId":"1:580329183256:android:0fb210dd7b78e1d0fb0b6d","fileOutput":"android/app/google-services.json"}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "tadika-62f76",
+          "configurations": {
+            "android": "1:677742863763:android:d99b4fa6da99693209f466",
+            "web": "1:677742863763:web:f2cb02a24ab1cbc509f466",
+            "windows": "1:677742863763:web:d94d8ef7b172ffc309f466"
+          }
+        }
+      },
+      "android": {
+        "default": {
+          "projectId": "tadika-62f76",
+          "appId": "1:677742863763:android:d99b4fa6da99693209f466",
+          "fileOutput": "android/app/google-services.json"
+        }
+      }
+    }
+  }
+}

@@ -63,9 +63,11 @@ class _RegistrationViewState extends State<RegistrationView> {
         ),
       ),
       body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 500),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
@@ -238,6 +240,7 @@ class _RegistrationViewState extends State<RegistrationView> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

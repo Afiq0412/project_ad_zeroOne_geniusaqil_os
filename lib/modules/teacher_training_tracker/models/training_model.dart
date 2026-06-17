@@ -12,7 +12,7 @@ class TrainingModel {
   final String venue;
   final String reflection;
   final String? certificateUrl;
-  final String? photoUrl;
+  final List<String>? photoUrls;
   final DateTime createdAt;
 
   TrainingModel({
@@ -27,12 +27,27 @@ class TrainingModel {
     required this.venue,
     required this.reflection,
     this.certificateUrl,
-    this.photoUrl,
+    this.photoUrls,
     required this.createdAt,
   });
 
-  // Converts the data from Firestore into our Flutter Model
   factory TrainingModel.fromJson(Map<String, dynamic> json, String documentId) {
+    // Gracefully handle old data and link-only attachment field names.
+    List<String>? parsedPhotos;
+    final photoValue =
+        json['photoUrls'] ?? json['photoLinks'] ?? json['activityPhotoLinks'];
+    if (photoValue is List) {
+      parsedPhotos = photoValue.map((value) => value.toString()).toList();
+    } else if (photoValue is String && photoValue.trim().isNotEmpty) {
+      parsedPhotos = [photoValue];
+    } else if (json['photoUrl'] is String &&
+        (json['photoUrl'] as String).trim().isNotEmpty) {
+      parsedPhotos = [json['photoUrl']];
+    }
+
+    final certificateValue =
+        json['certificateUrl'] ?? json['certificateLink'] ?? json['fileLink'];
+
     return TrainingModel(
       id: documentId,
       teacherId: json['teacherId'] ?? '',
@@ -44,13 +59,12 @@ class TrainingModel {
       mode: json['mode'] ?? 'Physical',
       venue: json['venue'] ?? '',
       reflection: json['reflection'] ?? '',
-      certificateUrl: json['certificateUrl'],
-      photoUrl: json['photoUrl'],
+      certificateUrl: certificateValue is String ? certificateValue : null,
+      photoUrls: parsedPhotos,
       createdAt: (json['createdAt'] as Timestamp).toDate(),
     );
   }
 
-  // Converts our Flutter Model into data Firestore can save
   Map<String, dynamic> toJson() {
     return {
       'teacherId': teacherId,
@@ -63,7 +77,7 @@ class TrainingModel {
       'venue': venue,
       'reflection': reflection,
       'certificateUrl': certificateUrl,
-      'photoUrl': photoUrl,
+      'photoUrls': photoUrls,
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }
