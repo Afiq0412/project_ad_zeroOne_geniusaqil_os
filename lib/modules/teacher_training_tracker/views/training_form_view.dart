@@ -513,8 +513,8 @@ class _TrainingFormViewState extends State<TrainingFormView> {
                               style: GoogleFonts.inter(fontSize: 13),
                             ),
                             trailing: widget.isViewOnly
-                                ? Row(
-                                    mainAxisSize: MainAxisSize.min,
+                                ? Wrap(
+                                    spacing: 8,
                                     children: [
                                       IconButton(
                                         tooltip: 'Copy photo link',
