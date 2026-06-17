@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/report_model.dart';
 import '../providers/report_provider.dart';
 
@@ -71,6 +73,25 @@ class ReportCard extends StatelessWidget {
       '${d.month.toString().padLeft(2, '0')}/'
       '${d.year}';
 
+  Future<void> _launchURL(BuildContext context, String urlString) async {
+    final url = Uri.parse(urlString);
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open the evidence link.')),
+      );
+    }
+  }
+
+  Future<void> _copyLink(BuildContext context, String urlString) async {
+    await Clipboard.setData(ClipboardData(text: urlString));
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Link copied')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -129,6 +150,12 @@ class ReportCard extends StatelessWidget {
                 _infoRow(Icons.description_outlined,
                     'Description', report.description),
 
+                if (report.evidenceUrl != null &&
+                    report.evidenceUrl!.trim().isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  _evidenceLink(context, report.evidenceUrl!.trim()),
+                ],
+
                 // Admin note
                 if (report.adminNote != null &&
                     report.adminNote!.isNotEmpty) ...[
@@ -181,6 +208,61 @@ class ReportCard extends StatelessWidget {
                 ],
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _evidenceLink(BuildContext context, String url) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.link, size: 18, color: Colors.grey.shade700),
+              const SizedBox(width: 8),
+              Text(
+                'Evidence Link',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SelectableText(
+            url,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              color: const Color(0xFF1F2937),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            children: [
+              OutlinedButton.icon(
+                icon: const Icon(Icons.copy, size: 18),
+                label: const Text('Copy'),
+                onPressed: () => _copyLink(context, url),
+              ),
+              FilledButton.icon(
+                icon: const Icon(Icons.open_in_new, size: 18),
+                label: const Text('Open'),
+                onPressed: () => _launchURL(context, url),
+              ),
+            ],
           ),
         ],
       ),

@@ -15,12 +15,14 @@ class SubmitReportView extends StatefulWidget {
 class _SubmitReportViewState extends State<SubmitReportView> {
   final _formKey = GlobalKey<FormState>();
   final _descController = TextEditingController();
+  final _evidenceLinkController = TextEditingController();
   String? _selectedCategory;
   bool _submitting = false;
 
   @override
   void dispose() {
     _descController.dispose();
+    _evidenceLinkController.dispose();
     super.dispose();
   }
 
@@ -48,6 +50,9 @@ class _SubmitReportViewState extends State<SubmitReportView> {
       reporterName: user.name,
       category: _selectedCategory!,
       description: _descController.text.trim(),
+      evidenceUrl: _evidenceLinkController.text.trim().isEmpty
+          ? null
+          : _evidenceLinkController.text.trim(),
     );
 
     if (!mounted) return;
@@ -111,6 +116,21 @@ class _SubmitReportViewState extends State<SubmitReportView> {
       status: '',
       createdAt: DateTime.now(),
     ).isSensitive;
+  }
+
+  String? _optionalUrlValidator(String? value) {
+    final trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) return null;
+
+    final uri = Uri.tryParse(trimmed);
+    if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
+      return 'Please enter a valid link';
+    }
+    if (uri.scheme != 'http' && uri.scheme != 'https') {
+      return 'Link must start with http:// or https://';
+    }
+
+    return null;
   }
 
   @override
@@ -313,6 +333,48 @@ class _SubmitReportViewState extends State<SubmitReportView> {
                       }
                       return null;
                     },
+                  ),
+                  const SizedBox(height: 24),
+
+                  Text('Evidence',
+                      style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF1F2937))),
+                  const SizedBox(height: 10),
+
+                  TextFormField(
+                    controller: _evidenceLinkController,
+                    keyboardType: TextInputType.url,
+                    decoration: InputDecoration(
+                      labelText: 'Evidence Google Drive link',
+                      hintText: 'https://drive.google.com/...',
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            BorderSide(color: Colors.grey.shade300),
+                      ),
+                      prefixIcon: const Icon(Icons.link),
+                      suffixIcon: _evidenceLinkController.text
+                              .trim()
+                              .isEmpty
+                          ? null
+                          : IconButton(
+                              tooltip: 'Clear link',
+                              icon: const Icon(Icons.close),
+                              onPressed: () {
+                                setState(() {
+                                  _evidenceLinkController.clear();
+                                });
+                              },
+                            ),
+                    ),
+                    validator: _optionalUrlValidator,
+                    onChanged: (_) => setState(() {}),
                   ),
                   const SizedBox(height: 24),
 

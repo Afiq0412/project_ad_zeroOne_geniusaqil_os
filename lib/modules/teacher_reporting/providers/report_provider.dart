@@ -25,6 +25,7 @@ class ReportProvider extends ChangeNotifier {
     required String reporterName,
     required String category,
     required String description,
+    String? evidenceUrl,
   }) async {
     _setLoading(true);
     try {
@@ -36,6 +37,7 @@ class ReportProvider extends ChangeNotifier {
         description: description,
         status: 'Pending',
         createdAt: DateTime.now(),
+        evidenceUrl: evidenceUrl,
       );
       await _service.submitReport(report);
       _setLoading(false);

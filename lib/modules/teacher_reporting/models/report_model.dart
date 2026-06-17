@@ -8,6 +8,7 @@ class ReportModel {
   final String description;
   final String status; // 'Pending', 'In Review', 'Resolved'
   final DateTime createdAt;
+  final String? evidenceUrl;
   final String? adminNote;
   final DateTime? resolvedAt;
 
@@ -19,6 +20,7 @@ class ReportModel {
     required this.description,
     required this.status,
     required this.createdAt,
+    this.evidenceUrl,
     this.adminNote,
     this.resolvedAt,
   });
@@ -63,6 +65,9 @@ class ReportModel {
 
   factory ReportModel.fromMap(
       Map<String, dynamic> data, String documentId) {
+    final evidenceValue =
+        data['evidenceUrl'] ?? data['evidenceLink'] ?? data['fileLink'];
+
     return ReportModel(
       id: documentId,
       reporterId: data['reporterId'] ?? '',
@@ -71,6 +76,7 @@ class ReportModel {
       description: data['description'] ?? '',
       status: data['status'] ?? 'Pending',
       createdAt: (data['createdAt'] as Timestamp).toDate(),
+      evidenceUrl: evidenceValue is String ? evidenceValue : null,
       adminNote: data['adminNote'] as String?,
       resolvedAt: data['resolvedAt'] != null
           ? (data['resolvedAt'] as Timestamp).toDate()
@@ -86,6 +92,7 @@ class ReportModel {
       'description': description,
       'status': status,
       'createdAt': Timestamp.fromDate(createdAt),
+      'evidenceUrl': evidenceUrl,
       'adminNote': adminNote,
       'resolvedAt':
           resolvedAt != null ? Timestamp.fromDate(resolvedAt!) : null,
