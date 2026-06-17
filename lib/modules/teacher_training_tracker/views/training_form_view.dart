@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart'; // 👈 Added for downloading/previewing
+import 'package:url_launcher/url_launcher.dart'; 
 import '../../auth/providers/auth_provider.dart';
 import '../providers/training_provider.dart';
 import '../models/training_model.dart';
