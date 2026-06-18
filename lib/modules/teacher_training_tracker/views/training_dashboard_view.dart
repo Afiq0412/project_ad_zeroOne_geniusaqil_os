@@ -24,7 +24,7 @@ class TrainingDashboardView extends StatelessWidget {
       backgroundColor: const Color(0xFFF3F4F6),
       appBar: AppBar(
         title: Text(
-          isPrincipal ? 'Principal Dashboard' : 'Learning Journey',
+          isPrincipal ? 'Teacher Training List' : 'Training Records',
           style: GoogleFonts.outfit(
               fontWeight: FontWeight.bold, color: Colors.white),
         ),
