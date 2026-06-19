@@ -1,6 +1,9 @@
+import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../models/report_model.dart';
 import '../providers/report_provider.dart';
@@ -15,15 +18,31 @@ class SubmitReportView extends StatefulWidget {
 class _SubmitReportViewState extends State<SubmitReportView> {
   final _formKey = GlobalKey<FormState>();
   final _descController = TextEditingController();
-  final _evidenceLinkController = TextEditingController();
   String? _selectedCategory;
   bool _submitting = false;
+  PlatformFile? _pickedEvidence;
 
   @override
   void dispose() {
     _descController.dispose();
-    _evidenceLinkController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickEvidence() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg'],
+        withData: true,
+      );
+      if (result != null && result.files.single.bytes != null) {
+        setState(() {
+          _pickedEvidence = result.files.single;
+        });
+      }
+    } catch (e) {
+      _snack('Error picking file: $e');
+    }
   }
 
   Future<void> _submit() async {
@@ -45,24 +64,61 @@ class _SubmitReportViewState extends State<SubmitReportView> {
       return;
     }
 
-    final success = await provider.submitReport(
-      reporterId: user.id,
-      reporterName: user.name,
-      category: _selectedCategory!,
-      description: _descController.text.trim(),
-      evidenceUrl: _evidenceLinkController.text.trim().isEmpty
-          ? null
-          : _evidenceLinkController.text.trim(),
-    );
+    String contentTypeFor(String filename) {
+      final lowerName = filename.toLowerCase();
+      if (lowerName.endsWith('.pdf')) return 'application/pdf';
+      if (lowerName.endsWith('.png')) return 'image/png';
+      if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) {
+        return 'image/jpeg';
+      }
+      if (lowerName.endsWith('.doc')) return 'application/msword';
+      if (lowerName.endsWith('.docx')) {
+        return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      }
+      return 'application/octet-stream';
+    }
 
-    if (!mounted) return;
-    setState(() => _submitting = false);
+    try {
+      final reportId = FirebaseFirestore.instance.collection('reports').doc().id;
+      String? evidenceUrl;
 
-    if (success) {
-      _snack('Report submitted successfully.');
-      Navigator.pop(context);
-    } else {
-      _snack(provider.errorMessage ?? 'Failed to submit report.');
+      if (_pickedEvidence != null) {
+        final bytes = _pickedEvidence!.bytes!;
+        final mimeType = contentTypeFor(_pickedEvidence!.name);
+        final base64Str = base64Encode(bytes);
+        final dataUrl = 'data:$mimeType;base64,$base64Str';
+
+        await FirebaseFirestore.instance
+            .collection('user_documents')
+            .doc('report_evidence_$reportId')
+            .set({'url': dataUrl});
+
+        evidenceUrl = 'user_documents/report_evidence_$reportId';
+      }
+
+      final success = await provider.submitReport(
+        reportId: reportId,
+        reporterId: user.id,
+        reporterName: user.name,
+        category: _selectedCategory!,
+        description: _descController.text.trim(),
+        evidenceUrl: evidenceUrl,
+      );
+
+      if (!mounted) return;
+      setState(() => _submitting = false);
+
+      if (success) {
+        _snack('Report submitted successfully.');
+        Navigator.pop(context);
+      } else {
+        _snack(provider.errorMessage ?? 'Failed to submit report.');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _submitting = false);
+        _snack(e.toString().replaceAll('Exception: ', ''));
+      }
     }
   }
 
@@ -118,20 +174,7 @@ class _SubmitReportViewState extends State<SubmitReportView> {
     ).isSensitive;
   }
 
-  String? _optionalUrlValidator(String? value) {
-    final trimmed = value?.trim() ?? '';
-    if (trimmed.isEmpty) return null;
 
-    final uri = Uri.tryParse(trimmed);
-    if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
-      return 'Please enter a valid link';
-    }
-    if (uri.scheme != 'http' && uri.scheme != 'https') {
-      return 'Link must start with http:// or https://';
-    }
-
-    return null;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -336,45 +379,49 @@ class _SubmitReportViewState extends State<SubmitReportView> {
                   ),
                   const SizedBox(height: 24),
 
-                  Text('Evidence',
+                  Text('Evidence (PDF or Image)',
                       style: GoogleFonts.outfit(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: const Color(0xFF1F2937))),
                   const SizedBox(height: 10),
 
-                  TextFormField(
-                    controller: _evidenceLinkController,
-                    keyboardType: TextInputType.url,
-                    decoration: InputDecoration(
-                      labelText: 'Evidence Google Drive link',
-                      hintText: 'https://drive.google.com/...',
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            BorderSide(color: Colors.grey.shade300),
+                  if (_pickedEvidence != null) ...[
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: Colors.blue.shade300)),
+                      tileColor: Colors.white,
+                      leading: Icon(
+                        _pickedEvidence!.name.toLowerCase().endsWith('.pdf')
+                            ? Icons.picture_as_pdf
+                            : Icons.image,
+                        color: Colors.blue,
                       ),
-                      prefixIcon: const Icon(Icons.link),
-                      suffixIcon: _evidenceLinkController.text
-                              .trim()
-                              .isEmpty
-                          ? null
-                          : IconButton(
-                              tooltip: 'Clear link',
-                              icon: const Icon(Icons.close),
-                              onPressed: () {
-                                setState(() {
-                                  _evidenceLinkController.clear();
-                                });
-                              },
-                            ),
+                      title: Text(_pickedEvidence!.name,
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w500, fontStyle: FontStyle.italic)),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.close, color: Colors.red),
+                        onPressed: () {
+                          setState(() {
+                            _pickedEvidence = null;
+                          });
+                        },
+                      ),
                     ),
-                    validator: _optionalUrlValidator,
-                    onChanged: (_) => setState(() {}),
+                    const SizedBox(height: 12),
+                  ],
+
+                  ElevatedButton.icon(
+                    onPressed: _submitting ? null : _pickEvidence,
+                    icon: const Icon(Icons.upload_file, color: Colors.white),
+                    label: Text(_pickedEvidence != null ? 'Change File' : 'Upload Evidence File', style: const TextStyle(color: Colors.white)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
                   ),
                   const SizedBox(height: 24),
 

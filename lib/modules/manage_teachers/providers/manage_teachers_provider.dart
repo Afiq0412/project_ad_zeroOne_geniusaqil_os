@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import '../models/teacher_manage_model.dart';
 import '../services/manage_teachers_service.dart';
@@ -10,6 +11,15 @@ class ManageTeachersProvider extends ChangeNotifier {
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+
+  Future<String?> uploadDocument(
+    String userId,
+    String slot,
+    Uint8List fileBytes,
+    String filename,
+  ) {
+    return _service.uploadFile(userId, slot, fileBytes, filename);
+  }
 
   Stream<List<TeacherManageModel>> streamTeachers() {
     return _service.streamTeachers();

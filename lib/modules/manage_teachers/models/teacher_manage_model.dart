@@ -24,6 +24,7 @@ class TeacherManageModel {
 
   // Module 1 — document submission checklist (true = submitted)
   final Map<String, bool> documents;
+  final Map<String, String> documentUrls;
 
   TeacherManageModel({
     required this.id,
@@ -40,6 +41,7 @@ class TeacherManageModel {
     this.emergencyContactName,
     this.emergencyContactPhone,
     this.documents = const <String, bool>{},
+    this.documentUrls = const <String, String>{},
   });
 
   /// The six document slots required by Module 1.
@@ -67,6 +69,24 @@ class TeacherManageModel {
     final ec = data['emergencyContact'] as Map<String, dynamic>?;
     final rawDocs = data['documents'] as Map<String, dynamic>?;
 
+    final Map<String, bool> parsedDocs = {};
+    final Map<String, String> parsedUrls = {};
+    for (final slot in documentSlots) {
+      parsedDocs[slot] = false;
+      parsedUrls[slot] = '';
+    }
+
+    if (rawDocs != null) {
+      rawDocs.forEach((k, v) {
+        if (v is String) {
+          parsedUrls[k] = v;
+          parsedDocs[k] = v.isNotEmpty;
+        } else if (v is bool) {
+          parsedDocs[k] = v;
+        }
+      });
+    }
+
     return TeacherManageModel(
       id: documentId,
       name: data['name'] ?? '',
@@ -81,9 +101,8 @@ class TeacherManageModel {
       maritalStatus: data['maritalStatus'] as String?,
       emergencyContactName: ec?['name'] as String?,
       emergencyContactPhone: ec?['phone'] as String?,
-      documents: rawDocs == null
-          ? const <String, bool>{}
-          : rawDocs.map((k, v) => MapEntry(k, v == true)),
+      documents: parsedDocs,
+      documentUrls: parsedUrls,
     );
   }
 
@@ -145,6 +164,7 @@ class TeacherManageModel {
     String? emergencyContactName,
     String? emergencyContactPhone,
     Map<String, bool>? documents,
+    Map<String, String>? documentUrls,
   }) {
     return TeacherManageModel(
       id: id,
@@ -161,6 +181,7 @@ class TeacherManageModel {
       emergencyContactName: emergencyContactName ?? this.emergencyContactName,
       emergencyContactPhone: emergencyContactPhone ?? this.emergencyContactPhone,
       documents: documents ?? this.documents,
+      documentUrls: documentUrls ?? this.documentUrls,
     );
   }
 }

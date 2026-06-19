@@ -21,12 +21,19 @@ class TrainingService {
       );
 
       UploadTask uploadTask = ref.putData(fileBytes, metadata);
-      TaskSnapshot snapshot = await uploadTask;
+      TaskSnapshot snapshot = await uploadTask.timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw Exception(
+            'Upload timed out. If testing on Web (Chrome), this is likely due to missing CORS configuration on Firebase Storage. Please check cors.json in the project root.',
+          );
+        },
+      );
 
       return await snapshot.ref.getDownloadURL();
     } catch (e) {
       print("Error uploading asset: $e");
-      return null;
+      rethrow;
     }
   }
 
@@ -38,6 +45,10 @@ class TrainingService {
     if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) {
       return 'image/jpeg';
     }
+    if (lowerName.endsWith('.doc')) return 'application/msword';
+    if (lowerName.endsWith('.docx')) {
+      return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    }
 
     return 'application/octet-stream';
   }
@@ -45,7 +56,11 @@ class TrainingService {
   // ... (Keep existing addTraining, stream, updateTraining, deleteTraining methods)
   Future<bool> addTraining(TrainingModel training) async {
     try {
-      await _db.collection('trainings').add(training.toJson());
+      if (training.id != null && training.id!.isNotEmpty) {
+        await _db.collection('trainings').doc(training.id).set(training.toJson());
+      } else {
+        await _db.collection('trainings').add(training.toJson());
+      }
       return true;
     } catch (e) {
       print("Error saving log: $e");

@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import '../models/report_model.dart';
 import '../services/report_service.dart';
@@ -11,6 +12,10 @@ class ReportProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
+  Future<String?> uploadEvidence(Uint8List fileBytes, String reporterId, String filename) {
+    return _service.uploadFile(fileBytes, reporterId, filename);
+  }
+
   /// Stream teacher's own reports
   Stream<List<ReportModel>> streamMyReports(String userId) =>
       _service.streamMyReports(userId);
@@ -21,6 +26,7 @@ class ReportProvider extends ChangeNotifier {
 
   /// Submit report
   Future<bool> submitReport({
+    String? reportId,
     required String reporterId,
     required String reporterName,
     required String category,
@@ -30,7 +36,7 @@ class ReportProvider extends ChangeNotifier {
     _setLoading(true);
     try {
       final report = ReportModel(
-        id: '',
+        id: reportId ?? '',
         reporterId: reporterId,
         reporterName: reporterName,
         category: category,

@@ -1,8 +1,12 @@
+import 'dart:convert';
+import 'dart:html' as html;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/teacher_manage_model.dart';
 import '../providers/manage_teachers_provider.dart';
 
@@ -42,6 +46,17 @@ class _TeacherRecordFormViewState extends State<TeacherRecordFormView> {
     for (final slot in TeacherManageModel.documentSlots) slot: false,
   };
 
+  final Map<String, String> _documentUrls = {
+    for (final slot in TeacherManageModel.documentSlots) slot: '',
+  };
+
+  final Map<String, bool> _uploadingDocs = {
+    for (final slot in TeacherManageModel.documentSlots) slot: false,
+  };
+  final Map<String, String> _pickedNames = {
+    for (final slot in TeacherManageModel.documentSlots) slot: '',
+  };
+
   bool _loading = true;
   bool _saving = false;
 
@@ -70,12 +85,223 @@ class _TeacherRecordFormViewState extends State<TeacherRecordFormView> {
         _dateOfBirth = record.dateOfBirth;
         for (final slot in TeacherManageModel.documentSlots) {
           _documents[slot] = record.documents[slot] ?? false;
+          _documentUrls[slot] = record.documentUrls[slot] ?? '';
         }
       }
     } catch (_) {
       // Leave fields empty; the form still works for a fresh record.
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  String _contentTypeFor(String filename) {
+    final lowerName = filename.toLowerCase();
+    if (lowerName.endsWith('.pdf')) return 'application/pdf';
+    if (lowerName.endsWith('.png')) return 'image/png';
+    if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) {
+      return 'image/jpeg';
+    }
+    if (lowerName.endsWith('.doc')) return 'application/msword';
+    if (lowerName.endsWith('.docx')) {
+      return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    }
+    return 'application/octet-stream';
+  }
+
+  Future<void> _viewDocument(BuildContext context, String url, String label) async {
+    final trimmed = url.trim();
+    if (trimmed.isEmpty) return;
+
+    String actualUrl = trimmed;
+
+    if (trimmed.startsWith('user_documents/') || trimmed.startsWith('/user_documents/')) {
+      final String docPath = trimmed.startsWith('/') ? trimmed.substring(1) : trimmed;
+      // Show loading indicator dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      try {
+        final doc = await FirebaseFirestore.instance.doc(docPath).get();
+        if (context.mounted) Navigator.pop(context); // Close loading indicator
+        
+        final fetched = doc.data()?['url'] as String?;
+        if (fetched == null || fetched.isEmpty) {
+          throw Exception('Document content is empty.');
+        }
+        actualUrl = fetched.trim();
+      } catch (e) {
+        if (context.mounted) {
+          Navigator.pop(context); // Close loading indicator in case of error
+          _snack('Error loading document: $e');
+        }
+        return;
+      }
+    }
+
+    if (!context.mounted) return;
+
+    if (!actualUrl.startsWith('data:') && !actualUrl.startsWith('http://') && !actualUrl.startsWith('https://')) {
+      _snack('Invalid or empty document content.');
+      return;
+    }
+
+    final isImage = actualUrl.startsWith('data:image/') ||
+        actualUrl.toLowerCase().contains('.png') ||
+        actualUrl.toLowerCase().contains('.jpg') ||
+        actualUrl.toLowerCase().contains('.jpeg') ||
+        actualUrl.toLowerCase().contains('.webp') ||
+        actualUrl.toLowerCase().contains('.gif');
+
+    final isPdf = actualUrl.startsWith('data:application/pdf') ||
+        actualUrl.toLowerCase().contains('.pdf');
+
+    if (isImage) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(label, style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              )
+            ],
+          ),
+          content: Container(
+            constraints: const BoxConstraints(maxHeight: 500, maxWidth: 600),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                actualUrl,
+                fit: BoxFit.contain,
+                loadingBuilder: (context, child, progress) {
+                  if (progress == null) return child;
+                  return const Center(child: CircularProgressIndicator());
+                },
+                errorBuilder: (context, error, stackTrace) {
+                  return const Center(child: Text('Failed to load image'));
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+    } else {
+      // PDF or other documents
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(label, style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              )
+            ],
+          ),
+          content: Container(
+            constraints: const BoxConstraints(maxHeight: 400, maxWidth: 500),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  isPdf ? Icons.picture_as_pdf : Icons.description_outlined,
+                  size: 64,
+                  color: isPdf ? Colors.red : Colors.blue,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  isPdf ? 'This document is a PDF file.' : 'This document is a Word/other file.',
+                  style: GoogleFonts.inter(fontSize: 14),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    if (actualUrl.startsWith('data:')) {
+                      final anchor = html.AnchorElement(href: actualUrl)
+                        ..target = '_blank'
+                        ..download = label.replaceAll(' ', '_') + (isPdf ? '.pdf' : '');
+                      anchor.click();
+                    } else {
+                      final urlLaunch = Uri.parse(actualUrl);
+                      if (!await launchUrl(urlLaunch, mode: LaunchMode.externalApplication)) {
+                        _snack('Could not download or open document.');
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.download, color: Colors.white),
+                  label: Text(
+                    isPdf ? 'Download PDF' : 'Download Document',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _pickAndUploadFile(String slot) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg', 'doc', 'docx'],
+        withData: true,
+      );
+      if (result != null && result.files.single.bytes != null) {
+        final file = result.files.single;
+        
+        setState(() {
+          _uploadingDocs[slot] = true;
+          _pickedNames[slot] = file.name;
+        });
+
+        final bytes = file.bytes!;
+        final base64Str = base64Encode(bytes);
+        final mimeType = _contentTypeFor(file.name);
+        final dataUrl = 'data:$mimeType;base64,$base64Str';
+
+        // Write to Firestore collection "user_documents" immediately
+        await FirebaseFirestore.instance
+            .collection('user_documents')
+            .doc('${widget.teacherId}_$slot')
+            .set({'url': dataUrl});
+
+        setState(() {
+          _documentUrls[slot] = 'user_documents/${widget.teacherId}_$slot';
+          _documents[slot] = true;
+          _uploadingDocs[slot] = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _uploadingDocs[slot] = false;
+        _pickedNames[slot] = '';
+      });
+      _snack('Upload failed: $e');
     }
   }
 
@@ -109,10 +335,36 @@ class _TeacherRecordFormViewState extends State<TeacherRecordFormView> {
       return;
     }
 
+    final isUploadingAny = _uploadingDocs.values.any((v) => v == true);
+    if (isUploadingAny) {
+      _snack('Please wait for all file uploads to complete.');
+      return;
+    }
+
     final provider = context.read<ManageTeachersProvider>();
     setState(() => _saving = true);
 
     try {
+      // Merge documents checklist with URLs:
+      // If we have a URL, store the URL string. If not, keep whatever was there.
+      final finalDocs = <String, dynamic>{};
+      for (final slot in TeacherManageModel.documentSlots) {
+        if (_documentUrls[slot] != null && _documentUrls[slot]!.isNotEmpty) {
+          finalDocs[slot] = _documentUrls[slot];
+        } else {
+          finalDocs[slot] = _documents[slot] ?? false;
+        }
+      }
+
+      // Check if all document checklist items are complete
+      final hasAllDocs = TeacherManageModel.documentSlots.every((slot) =>
+          (finalDocs[slot] is String && (finalDocs[slot] as String).isNotEmpty) ||
+          (finalDocs[slot] is bool && finalDocs[slot] == true));
+
+      if (!hasAllDocs) {
+        throw Exception('You must upload all documents in the checklist.');
+      }
+
       final data = <String, dynamic>{
         'name': _nameController.text.trim(),
         'email': _emailController.text.trim(),
@@ -126,7 +378,7 @@ class _TeacherRecordFormViewState extends State<TeacherRecordFormView> {
           'name': _emergencyNameController.text.trim(),
           'phone': _emergencyPhoneController.text.trim(),
         },
-        'documents': Map<String, dynamic>.from(_documents),
+        'documents': finalDocs,
       };
 
       final success = await provider.saveRecord(widget.teacherId, data);
@@ -390,29 +642,125 @@ class _TeacherRecordFormViewState extends State<TeacherRecordFormView> {
 
   Widget _buildChecklistRow(String slot) {
     final label = TeacherManageModel.documentLabels[slot] ?? slot;
-    final ticked = _documents[slot] ?? false;
+    final url = _documentUrls[slot] ?? '';
+    final pickedName = _pickedNames[slot] ?? '';
+    final isUploading = _uploadingDocs[slot] == true;
+    final hasUploaded = url.isNotEmpty;
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 1,
-      child: CheckboxListTile(
-        value: ticked,
-        onChanged: (v) => setState(() => _documents[slot] = v ?? false),
-        title: Text(label,
-            style: GoogleFonts.inter(
-                fontWeight: FontWeight.w600, fontSize: 14)),
-        secondary: Icon(
-          ticked ? Icons.task_alt : Icons.radio_button_unchecked,
-          color: ticked
-              ? Colors.green
-              : Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    label,
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: const Color(0xFF1F2937),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (isUploading)
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else if (hasUploaded)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'Uploaded',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: Colors.green.shade700,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'Missing',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: Colors.red.shade700,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            if (pickedName.isNotEmpty && isUploading)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Row(
+                  children: [
+                    const Icon(Icons.cloud_upload_outlined, size: 16, color: Colors.orange),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Uploading: $pickedName',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: Colors.orange.shade800,
+                          fontStyle: FontStyle.italic,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (hasUploaded) ...[
+                  OutlinedButton.icon(
+                    onPressed: () => _viewDocument(context, url, TeacherManageModel.documentLabels[slot] ?? slot),
+                    icon: const Icon(Icons.open_in_new, size: 14),
+                    label: const Text('View'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      minimumSize: Size.zero,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                ElevatedButton.icon(
+                  onPressed: isUploading ? null : () => _pickAndUploadFile(slot),
+                  icon: const Icon(Icons.upload_file, size: 14, color: Colors.white),
+                  label: Text(hasUploaded ? 'Change File' : 'Upload File', style: const TextStyle(color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    minimumSize: Size.zero,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-        activeColor: Colors.green,
-        checkColor: Colors.white,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        controlAffinity: ListTileControlAffinity.trailing,
       ),
     );
   }

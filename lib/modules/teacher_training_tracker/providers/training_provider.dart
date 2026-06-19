@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../models/training_model.dart';
@@ -10,6 +11,10 @@ class TrainingProvider extends ChangeNotifier {
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+
+  Future<String?> uploadAttachment(Uint8List fileBytes, String folder, String filename) {
+    return _service.uploadFile(fileBytes, folder, filename);
+  }
 
   Stream<List<TrainingModel>> streamAllTrainings() {
     return _service.streamAllTrainings();

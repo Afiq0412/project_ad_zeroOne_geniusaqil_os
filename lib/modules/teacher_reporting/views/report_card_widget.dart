@@ -1,3 +1,5 @@
+import 'dart:html' as html;
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -74,11 +76,164 @@ class ReportCard extends StatelessWidget {
       '${d.year}';
 
   Future<void> _launchURL(BuildContext context, String urlString) async {
-    final url = Uri.parse(urlString);
-    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-      if (!context.mounted) return;
+    final trimmed = urlString.trim();
+    if (trimmed.isEmpty) return;
+
+    String actualUrl = trimmed;
+
+    if (trimmed.startsWith('user_documents/') || trimmed.startsWith('/user_documents/')) {
+      final String docPath = trimmed.startsWith('/') ? trimmed.substring(1) : trimmed;
+      // Show loading indicator dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      try {
+        final doc = await FirebaseFirestore.instance.doc(docPath).get();
+        if (context.mounted) Navigator.pop(context); // Close loading indicator
+        
+        final fetched = doc.data()?['url'] as String?;
+        if (fetched == null || fetched.isEmpty) {
+          throw Exception('Document content is empty.');
+        }
+        actualUrl = fetched.trim();
+      } catch (e) {
+        if (context.mounted) {
+          Navigator.pop(context); // Close loading indicator in case of error
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error loading document: $e')),
+          );
+        }
+        return;
+      }
+    }
+
+    if (!context.mounted) return;
+
+    if (!actualUrl.startsWith('data:') && !actualUrl.startsWith('http://') && !actualUrl.startsWith('https://')) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open the evidence link.')),
+        const SnackBar(content: Text('Invalid or empty evidence link.')),
+      );
+      return;
+    }
+
+    final isImage = actualUrl.startsWith('data:image/') ||
+        actualUrl.toLowerCase().contains('.png') ||
+        actualUrl.toLowerCase().contains('.jpg') ||
+        actualUrl.toLowerCase().contains('.jpeg') ||
+        actualUrl.toLowerCase().contains('.webp') ||
+        actualUrl.toLowerCase().contains('.gif');
+
+    final isPdf = actualUrl.startsWith('data:application/pdf') ||
+        actualUrl.toLowerCase().contains('.pdf');
+
+    if (isImage) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text('Evidence Image', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              )
+            ],
+          ),
+          content: Container(
+            constraints: const BoxConstraints(maxHeight: 500, maxWidth: 600),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                actualUrl,
+                fit: BoxFit.contain,
+                loadingBuilder: (context, child, progress) {
+                  if (progress == null) return child;
+                  return const Center(child: CircularProgressIndicator());
+                },
+                errorBuilder: (context, error, stackTrace) {
+                  return const Center(child: Text('Failed to load image'));
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+    } else {
+      // PDF or other documents
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text('Evidence Document', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              )
+            ],
+          ),
+          content: Container(
+            constraints: const BoxConstraints(maxHeight: 400, maxWidth: 500),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  isPdf ? Icons.picture_as_pdf : Icons.description_outlined,
+                  size: 64,
+                  color: isPdf ? Colors.red : Colors.blue,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  isPdf ? 'This document is a PDF file.' : 'This document is a Word/other file.',
+                  style: GoogleFonts.inter(fontSize: 14),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    if (actualUrl.startsWith('data:')) {
+                      final anchor = html.AnchorElement(href: actualUrl)
+                        ..target = '_blank'
+                        ..download = 'evidence' + (isPdf ? '.pdf' : '');
+                      anchor.click();
+                    } else {
+                      final urlLaunch = Uri.parse(actualUrl);
+                      if (!await launchUrl(urlLaunch, mode: LaunchMode.externalApplication)) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Could not download or open document.')),
+                          );
+                        }
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.download, color: Colors.white),
+                  label: Text(
+                    isPdf ? 'Download PDF' : 'Download Document',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
   }
@@ -215,6 +370,13 @@ class ReportCard extends StatelessWidget {
   }
 
   Widget _evidenceLink(BuildContext context, String url) {
+    final bool isImage = url.toLowerCase().contains('.png') ||
+        url.toLowerCase().contains('.jpg') ||
+        url.toLowerCase().contains('.jpeg') ||
+        url.toLowerCase().contains('.webp') ||
+        url.toLowerCase().contains('image') ||
+        url.contains('report_evidence_');
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -231,7 +393,7 @@ class ReportCard extends StatelessWidget {
               Icon(Icons.link, size: 18, color: Colors.grey.shade700),
               const SizedBox(width: 8),
               Text(
-                'Evidence Link',
+                'Evidence File / Link',
                 style: GoogleFonts.inter(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
@@ -248,6 +410,10 @@ class ReportCard extends StatelessWidget {
               color: const Color(0xFF1F2937),
             ),
           ),
+          if (isImage) ...[
+            const SizedBox(height: 10),
+            DocumentEvidencePreviewWidget(url: url),
+          ],
           const SizedBox(height: 10),
           Wrap(
             spacing: 8,
@@ -406,6 +572,89 @@ class ReportAdminActions extends StatelessWidget {
                 style: GoogleFonts.inter(color: Colors.white)),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class DocumentEvidencePreviewWidget extends StatefulWidget {
+  final String url;
+  const DocumentEvidencePreviewWidget({super.key, required this.url});
+
+  @override
+  State<DocumentEvidencePreviewWidget> createState() => _DocumentEvidencePreviewWidgetState();
+}
+
+class _DocumentEvidencePreviewWidgetState extends State<DocumentEvidencePreviewWidget> {
+  String? _resolvedUrl;
+  bool _loading = true;
+  bool _isImage = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolve();
+  }
+
+  Future<void> _resolve() async {
+    final trimmed = widget.url.trim();
+    if (trimmed.isEmpty) {
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
+
+    String actual = trimmed;
+    if (trimmed.startsWith('user_documents/') || trimmed.startsWith('/user_documents/')) {
+      final docPath = trimmed.startsWith('/') ? trimmed.substring(1) : trimmed;
+      try {
+        final doc = await FirebaseFirestore.instance.doc(docPath).get();
+        final fetched = doc.data()?['url'] as String?;
+        if (fetched != null) {
+          actual = fetched;
+        }
+      } catch (_) {}
+    }
+
+    final isImg = actual.startsWith('data:image/') ||
+        actual.toLowerCase().contains('.png') ||
+        actual.toLowerCase().contains('.jpg') ||
+        actual.toLowerCase().contains('.jpeg') ||
+        actual.toLowerCase().contains('.webp') ||
+        actual.toLowerCase().contains('.gif') ||
+        actual.toLowerCase().contains('image');
+
+    if (mounted) {
+      setState(() {
+        _resolvedUrl = actual;
+        _isImage = isImg;
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const SizedBox(
+        height: 100,
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    }
+
+    if (!_isImage || _resolvedUrl == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      constraints: const BoxConstraints(maxHeight: 250),
+      width: double.infinity,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Image.network(
+          _resolvedUrl!,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image, size: 50)),
+        ),
       ),
     );
   }
