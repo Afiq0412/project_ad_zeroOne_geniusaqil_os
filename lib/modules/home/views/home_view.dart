@@ -158,48 +158,50 @@ class HomeView extends StatelessWidget {
                   ),
                   const SizedBox(height: 40),
 
-                  // My Profile card — all roles can view/edit their own record
-                  Card(
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.all(16),
-                      leading: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color:
-                              Colors.deepPurple.withValues(alpha: 0.1), // UBAH
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.account_circle_outlined,
-                          color: Colors.deepPurple,
-                        ),
+                  // My Profile card — only teachers can view/edit their own record
+                  if (user?.role.toLowerCase() == 'teacher') ...[
+                    Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                      title: Text(
-                        'My Profile',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Text(
-                        'View and update your personal record and documents',
-                        style: GoogleFonts.inter(color: Colors.grey.shade600),
-                      ),
-                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                      onTap: () {
-                        if (user == null) return;
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                TeacherRecordFormView(teacherId: user.id),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.all(16),
+                        leading: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color:
+                                Colors.deepPurple.withValues(alpha: 0.1), // UBAH
+                            shape: BoxShape.circle,
                           ),
-                        );
-                      },
+                          child: const Icon(
+                            Icons.account_circle_outlined,
+                            color: Colors.deepPurple,
+                          ),
+                        ),
+                        title: Text(
+                          'My Profile',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          'View and update your personal record and documents',
+                          style: GoogleFonts.inter(color: Colors.grey.shade600),
+                        ),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: () {
+                          if (user == null) return;
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  TeacherRecordFormView(teacherId: user.id),
+                            ),
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
+                    const SizedBox(height: 12),
+                  ],
 
                   // Leave Management module
                   Card(

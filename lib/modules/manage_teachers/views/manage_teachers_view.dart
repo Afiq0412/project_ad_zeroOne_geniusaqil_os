@@ -5,6 +5,7 @@ import '../models/teacher_manage_model.dart';
 import '../providers/manage_teachers_provider.dart';
 import 'teacher_record_detail_view.dart';
 import 'teacher_record_form_view.dart';
+import '../../leave_management/services/notification_service.dart';
 
 class ManageTeachersView extends StatelessWidget {
   const ManageTeachersView({super.key});
@@ -185,7 +186,7 @@ class ManageTeachersView extends StatelessWidget {
           MaterialPageRoute(
             builder: (_) => TeacherRecordDetailView(
               teacherId: teacher.id,
-              canEdit: true,
+              canEdit: false,
             ),
           ),
         ),
@@ -295,27 +296,22 @@ class ManageTeachersView extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
                 onSelected: (value) {
-                  if (value == 'edit') {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            TeacherRecordFormView(teacherId: teacher.id),
-                      ),
-                    );
+                  if (value == 'remind') {
+                    _sendProfileReminder(context, teacher);
                   } else if (value == 'remove') {
                     _confirmRemove(context, teacher, provider);
                   }
                 },
                 itemBuilder: (_) => [
-                  PopupMenuItem(
-                    value: 'edit',
-                    child: Row(children: [
-                      const Icon(Icons.edit_outlined, size: 18),
-                      const SizedBox(width: 10),
-                      Text('Edit Record', style: GoogleFonts.inter()),
-                    ]),
-                  ),
+                  if (!teacher.isComplete)
+                    PopupMenuItem(
+                      value: 'remind',
+                      child: Row(children: [
+                        const Icon(Icons.send_outlined, size: 18, color: Colors.orange),
+                        const SizedBox(width: 10),
+                        Text('Send Reminder', style: GoogleFonts.inter(color: Colors.orange.shade800)),
+                      ]),
+                    ),
                   PopupMenuItem(
                     value: 'remove',
                     child: Row(children: [
@@ -420,5 +416,57 @@ class ManageTeachersView extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _sendProfileReminder(BuildContext context, TeacherManageModel teacher) async {
+    final missingSlots = TeacherManageModel.documentSlots
+        .where((s) => teacher.documents[s] != true)
+        .toList();
+
+    final hasMissingInfo = [
+      teacher.name,
+      teacher.email,
+      teacher.icNumber,
+      teacher.gender,
+      teacher.address,
+      teacher.phoneNumber,
+      teacher.maritalStatus,
+      teacher.emergencyContactName,
+      teacher.emergencyContactPhone,
+    ].any((v) => v == null || v.trim().isEmpty) || teacher.dateOfBirth == null;
+
+    final List<String> missingItems = [];
+    if (hasMissingInfo) {
+      missingItems.add('Profile details');
+    }
+    if (missingSlots.isNotEmpty) {
+      final missingLabels = missingSlots
+          .map((s) => TeacherManageModel.documentLabels[s] ?? s)
+          .toList();
+      missingItems.add('Missing documents (${missingLabels.join(", ")})');
+    }
+
+    final message = 'Principal has requested you to complete your profile checklist. '
+        'Pending items: ${missingItems.join(" & ")}.';
+
+    final notificationService = NotificationService();
+    await notificationService.sendNotification(
+      userId: teacher.id,
+      title: 'Profile Checklist Reminder',
+      message: message,
+      type: 'reminder',
+    );
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Reminder notification sent to ${teacher.name}!'),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+    }
   }
 }

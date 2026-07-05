@@ -39,7 +39,7 @@ class TeacherRecordDetailView extends StatelessWidget {
         backgroundColor: Theme.of(context).colorScheme.primary,
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
-        actions: canEdit
+        actions: (canEdit && !isPrincipal)
             ? [
                 IconButton(
                   icon: const Icon(Icons.edit_outlined, color: Colors.white),

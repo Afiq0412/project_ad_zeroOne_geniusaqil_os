@@ -9,6 +9,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/teacher_manage_model.dart';
 import '../providers/manage_teachers_provider.dart';
+import '../../auth/providers/auth_provider.dart';
 
 /// Add / edit a teacher record (Module 1 — Teacher Record).
 ///
@@ -409,6 +410,47 @@ class _TeacherRecordFormViewState extends State<TeacherRecordFormView> {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final isPrincipal = authProvider.currentUserModel?.role.toLowerCase() == 'principal';
+
+    if (isPrincipal) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF3F4F6),
+        appBar: AppBar(
+          title: Text(
+            'Teacher Record',
+            style: GoogleFonts.outfit(
+                fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          iconTheme: const IconThemeData(color: Colors.white),
+          elevation: 0,
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.lock_outline, size: 64, color: Colors.orange.shade700),
+                const SizedBox(height: 16),
+                Text(
+                  'Access Denied',
+                  style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Principals are not allowed to edit teacher profiles. Only teachers can edit their own profiles.',
+                  style: GoogleFonts.inter(color: Colors.grey.shade600, fontSize: 15),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F6),
       appBar: AppBar(
